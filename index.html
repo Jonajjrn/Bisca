@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bisca: Dictator Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Share+Tech+Mono&family=Press+Start+2P&family=Bangers&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --terminal-green: #0f0;
+            --gold: #ffd700;
+            --danger: #ff3b3b;
+            --card-width: 85px;
+            --card-height: 130px;
+        }
+
+        /* --- LAYOUT GENERALE --- */
+        body { 
+            font-family: 'Share Tech Mono', monospace; 
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 50%, #2a3b45 0%, #000000 120%),
+                linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+            color: #e0e0e0; 
+            margin: 0; padding: 0;
+            height: 100vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            transition: background 1s ease;
+        }
+
+        body.duel-mode {
+            background-image: 
+                radial-gradient(circle at 50% 50%, #4a0000 0%, #000000 100%),
+                repeating-linear-gradient(45deg, rgba(255,0,0,0.05) 0px, rgba(255,0,0,0.05) 2px, transparent 2px, transparent 10px);
+            background-size: cover;
+        }
+
+        #system-log {
+            height: 30px; background: #000; color: var(--terminal-green); 
+            font-family: 'Share Tech Mono', monospace; font-size: 14px;
+            line-height: 30px; padding: 0 15px; border-bottom: 2px solid #333;
+            white-space: nowrap; overflow: hidden; text-shadow: 0 0 5px var(--terminal-green);
+            position: relative; z-index: 20;
+        }
+        .log-ok { color: var(--terminal-green); }
+        .log-err { color: var(--danger); text-shadow: 0 0 5px red; font-weight: bold; }
+
+        .setup-input {
+            padding: 10px; font-size: 16px; border-radius: 4px; margin: 8px; 
+            background: #222; color: var(--terminal-green); 
+            border: 1px solid var(--terminal-green); font-family: 'Share Tech Mono'; 
+            width: 220px; text-align: center;
+        }
+
+        #setup-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.8));
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; backdrop-filter: blur(5px);
+        }
+        .main-title {
+            font-family: 'Russo One', sans-serif;
+            color: #c0392b; font-size: 5em; margin: 0;
+            text-transform: uppercase; letter-spacing: 5px;
+            text-shadow: 4px 4px 0px #000, 0 0 20px rgba(192, 57, 43, 0.6);
+            animation: pulseTitle 3s infinite;
+        }
+        @keyframes pulseTitle { 0% { text-shadow: 4px 4px 0 #000; } 50% { text-shadow: 4px 4px 0 #000, 0 0 30px red; } 100% { text-shadow: 4px 4px 0 #000; } }
+        
+        #btn-start {
+            font-family: 'Russo One'; font-size: 22px; padding: 15px 50px; margin-top: 20px;
+            background: #8b0000; color: white; border: none;
+            clip-path: polygon(10% 0, 100% 0, 100% 80%, 90% 100%, 0 100%, 0 20%);
+            transition: transform 0.1s, background 0.2s; cursor: pointer;
+        }
+        #btn-start:hover { transform: scale(1.05); background: #ff0000; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
+
+        #duel-transition-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 15000;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        .duel-text {
+            font-family: 'Russo One'; font-size: 4em; color: #ff0000;
+            text-shadow: 0 0 20px red; text-align: center;
+            animation: dramaZoom 3s forwards;
+        }
+        .duel-subtext {
+            font-family: 'Share Tech Mono'; font-size: 1.5em; color: #fff; margin-top: 20px;
+            opacity: 0; animation: fadeIn 1s 1s forwards;
+        }
+        @keyframes dramaZoom { 0% { transform: scale(0.5); opacity: 0; } 20% { opacity: 1; } 90% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(20); opacity: 0; } }
+
+        #victory-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(50,0,0,0.9) 0%, #000 100%);
+            z-index: 10000; flex-direction: column; justify-content: center; align-items: center;
+            animation: fadeIn 1s ease-in;
+        }
+        .victory-title {
+            font-family: 'Russo One'; font-size: 6em; color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 5px 5px 0 #000;
+            animation: zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .victory-name {
+            font-family: 'Press Start 2P'; font-size: 3em; color: #fff; margin-top: 20px;
+            text-shadow: 4px 4px 0 #c0392b;
+            animation: pulse 2s infinite;
+        }
+        .confetti {
+            position: absolute; width: 10px; height: 10px; background: gold;
+            animation: fall linear infinite;
+        }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+        @keyframes zoomIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* --- NEW AVATAR & BUBBLE STYLES --- */
+        
+        .avatar-frame {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--gold);
+            background: #333;
+            overflow: hidden;
+            margin-bottom: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 15;
+        }
+        .avatar-img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .avatar-fallback {
+            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+            font-family: 'Russo One'; font-size: 20px; color: #555; background: #222;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            bottom: 100%; 
+            left: 50%; 
+            transform: translateX(-50%) scale(0);
+            transform-origin: bottom center;
+            
+            background: #fff; 
+            color: #000;
+            padding: 10px 15px; 
+            border-radius: 20px;
+            border: 3px solid #000;
+            
+            font-family: 'Bangers', cursive; 
+            font-size: 16px; 
+            letter-spacing: 1px;
+            line-height: 1.2;
+            text-align: center;
+            white-space: nowrap; 
+            
+            z-index: 300;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .speech-bubble::before {
+            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -8px;
+            border-width: 8px; border-style: solid; border-color: #000 transparent transparent transparent;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+            border-width: 5px; border-style: solid; border-color: #fff transparent transparent transparent;
+            margin-top: -3px; 
+        }
+
+        .speech-bubble.show {
+            opacity: 1;
+            bottom: 120%;
+            transform: translateX(-50%) scale(1);
+        }
+
+        .dealer-btn {
+            position: absolute; top: -10px; right: -10px;
+            width: 25px; height: 25px; background: #fff; border: 2px solid var(--gold);
+            border-radius: 50%; color: #000; font-family: 'Russo One'; font-size: 14px;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 50; box-shadow: 0 0 5px var(--gold);
+        }
+
+        /* --- GRIGLIA DI GIOCO AGGIORNATA PER SPAZIO IN ALTO --- */
+        #game-area { 
+            flex-grow: 1; display: none; 
+            grid-template-columns: 220px 1fr 220px;
+            /* Aumentato primo valore da 140px a 200px per evitare tagli in alto */
+            grid-template-rows: 200px 1fr 260px;
+            height: 100%; width: 100%;
+        }
+
+        .side-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; }
+        #area-left { grid-column: 1; grid-row: 2; }
+        #area-right { grid-column: 3; grid-row: 2; }
+        #area-top { grid-column: 1 / span 3; grid-row: 1; display: flex; justify-content: center; align-items: center; gap: 30px; padding-top: 10px; }
+
+        #area-center {
+            grid-column: 2; grid-row: 2;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative;
+        }
+        #table-cards-container {
+            display: flex; justify-content: center; align-items: center;
+            height: 200px; width: 100%; perspective: 600px;
+        }
+        
+        .center-msg {
+            position: absolute; width: 100%; text-align: center;
+            font-family: 'Russo One'; z-index: 100; pointer-events: none; display: none;
+        }
+        
+        #round-info { top: 15%; color: rgba(255,255,255,0.1); font-size: 3em; z-index: -1; text-shadow: 0 0 10px #000;}
+        #trick-winner-msg { top: 10%; color: var(--gold); font-size: 2em; text-shadow: 2px 2px 0 #000; }
+        #elimination-msg {
+            top: 40%; transform: translateY(-50%); color: #ff0000; font-size: 2.5em; 
+            text-shadow: 0 0 20px black, 3px 3px 0 #500; background: rgba(0,0,0,0.85);
+            padding: 20px 0; border-top: 2px solid red; border-bottom: 2px solid red;
+        }
+
+        .table-card-wrapper {
+            display: flex; flex-direction: column; align-items: center; margin: 0 15px; position: relative;
+            animation: cardDeal 0.3s ease-out;
+        }
+        @keyframes cardDeal { from { opacity: 0; transform: translateY(-50px) scale(1.5); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        .table-card-label {
+            font-family: 'Russo One'; font-size: 16px; color: #fff;
+            background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px;
+            margin-bottom: 5px; text-shadow: 1px 1px 2px #000; letter-spacing: 1px;
+        }
+
+        .player-box { 
+            background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);
+            border: 1px solid #444; border-radius: 8px; padding: 8px; width: 160px; 
+            position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: all 0.3s;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .player-box.active { transform: scale(1.05); border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        .player-box.eliminated { opacity: 0.4; filter: grayscale(1); border: 1px solid red; transform: scale(0.9); }
+        .p-name { font-family: 'Russo One'; font-size: 14px; color: #fff; margin-bottom: 4px; text-shadow: 1px 1px 2px black; }
+        
+        .heart-container { display: flex; gap: 2px; margin-bottom: 5px; height: 16px; flex-wrap: wrap; justify-content: center;}
+        .pixel-heart {
+            width: 16px; height: 16px; image-rendering: pixelated;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path fill="%23e74c3c" d="M2 2h2v1h2V2h2v3H7v1H6v1H5v1H4V7H3V6H2V2z"/><path fill="%23741b16" d="M1 2h1v3H1V2zm1 3h1v1H2V5zm1 1h1v1H3V6zm1 1h2v1H4V7zm2-1h1V5h1v1H6zm1-2h1V2h-1v1z"/></svg>');
+            background-size: contain; background-repeat: no-repeat;
+        }
+        .pixel-heart.dead { opacity: 0.2; filter: grayscale(100%); }
+
+        .stats-row { display: flex; width: 100%; justify-content: space-between; margin-top: 5px; background: #111; border-radius: 4px; padding: 2px; }
+        .stat-badge { flex: 1; text-align: center; font-size: 11px; padding: 2px 0; font-weight: bold; border-radius: 2px; margin: 0 1px; }
+        .stat-badge.bid { background: #333; color: var(--gold); border-bottom: 2px solid var(--gold); }
+        .stat-badge.taken { background: #333; color: #fff; border-bottom: 2px solid #555; transition: 0.3s; }
+        .stat-badge.taken.ok { background: rgba(0,255,0,0.1); color: #0f0; border-bottom-color: #0f0; }
+        .stat-badge.taken.danger { background: rgba(255,0,0,0.2); color: #f00; border-bottom-color: #f00; animation: blinkRed 1s infinite; }
+        @keyframes blinkRed { 50% { background: rgba(255,0,0,0.5); } }
+
+        .bot-hand { display: flex; justify-content: center; height: 40px; margin-top: 5px; }
+        .card-back-mini {
+            width: 25px; height: 38px; background: repeating-linear-gradient(45deg, #590d0d, #590d0d 5px, #821515 5px, #821515 10px);
+            border: 1px solid #aaa; border-radius: 2px; margin-left: -15px; box-shadow: 1px 1px 3px black;
+        }
+        .card-back-mini:first-child { margin-left: 0; }
+
+        .card-placeholder {
+            width: var(--card-width); height: var(--card-height);
+            position: absolute; bottom: 0; transform-origin: center 150%; z-index: 10;
+            padding-top: 50px; margin-top: -50px; pointer-events: auto;
+        }
+        .card-visual {
+            width: 100%; height: 100%;
+            background: #fdfbf7; border-radius: 6px; border: 1px solid #000;
+            background-size: cover; background-position: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); cursor: pointer;
+        }
+        .card-visual.back { background: repeating-linear-gradient(45deg, #8b0000, #8b0000 10px, #a52a2a 10px, #a52a2a 20px); border: 2px solid #fff; }
+        .card-placeholder:hover .card-visual { transform: translateY(-40px) scale(1.1); border-color: var(--gold); box-shadow: 0 0 20px var(--gold); z-index: 100; }
+
+        .card-table {
+            width: 70px; height: 110px; background: #fdfbf7; border-radius: 6px; border: 1px solid #ccc;
+            background-size: cover; background-position: center; box-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+        }
+
+        #area-player {
+            grid-column: 1 / span 3; grid-row: 3;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            padding-bottom: 20px; position: relative;
+        }
+        
+        #my-cards { height: 150px; width: 100%; position: relative; display: flex; justify-content: center; }
+        
+        #my-player-info {
+            display: flex; align-items: center; gap: 20px;
+            background: rgba(0,0,0,0.8); padding: 5px 20px; border-radius: 20px;
+            border: 1px solid #444; margin-bottom: 5px; backdrop-filter: blur(4px); z-index: 200;
+        }
+
+        #controls { height: 40px; display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 5px; z-index: 200;}
+        .game-btn { 
+            padding: 8px 20px; font-size: 16px; cursor: pointer; 
+            background: #2c3e50; border: 1px solid #4ca1af; border-radius: 4px; 
+            color: #4ca1af; font-family: 'Share Tech Mono'; font-weight: bold; transition: 0.2s;
+        }
+        .game-btn:hover { background: #4ca1af; color: #000; box-shadow: 0 0 15px #4ca1af; }
+        .game-btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); box-shadow: none; text-decoration: line-through;}
+
+        #jolly-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000;
+            display: none; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(5px);
+        }
+        .jolly-content {
+            background: #111; padding: 40px; border-radius: 10px; border: 2px solid gold;
+            text-align: center; box-shadow: 0 0 50px rgba(255,215,0,0.3); color: white; font-family: 'Russo One';
+        }
+        .btn-jolly { width: 100%; padding: 15px; margin: 10px 0; font-size: 18px; border: none; font-weight: bold; cursor: pointer; color: #fff;}
+
+        .float-msg {
+            position: absolute; color: gold; font-family: 'Russo One'; font-size: 24px;
+            text-shadow: 2px 2px 0 #000; animation: floatUp 1.5s forwards;
+            pointer-events: none; z-index: 500;
+        }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="system-log">Inizializzazione Sistema Bisca v.3.0...</div>
+
+ <div id="setup-screen">
+        <h1 class="main-title">BISCA</h1>
+        <h3 style="color: #888; margin-top:0px; font-family: 'Share Tech Mono'; letter-spacing: 2px;">DICTATOR EDITION</h3>
+        
+        <div style="margin: 20px; text-align: center; display:flex; flex-direction:column; align-items:center;">
+            
+            <label style="color: var(--terminal-green);">TUO NOME IN CODICE:</label>
+            <input type="text" id="player-name" class="setup-input" maxlength="12">
+
+            <label style="color: var(--terminal-green); margin-top:5px;">NUMERO DI VITE:</label>
+            <select id="lives-count" class="setup-input">
+                <option value="1">1 (Sudden Death)</option>
+                <option value="3" selected>3 (Standard)</option>
+                <option value="5">5 (Maratona)</option>
+            </select>
+
+            <label style="color: var(--terminal-green); margin-top:5px;">CARTE INIZIALI (MAX):</label>
+            <select id="initial-cards" class="setup-input">
+                <option value="3">3 Carte</option>
+                <option value="4">4 Carte</option>
+                <option value="5" selected>5 Carte (Standard)</option>
+                <option value="6">6 Carte</option>
+            </select>
+
+            <label style="color: var(--terminal-green); margin-top:5px;">AVVERSARI:</label>
+            <select id="bot-count" class="setup-input">
+                <option value="1">1 (Duello)</option>
+                <option value="2">2 (Triello)</option>
+                <option value="3" selected>3 (Tavolo da 4)</option>
+                <option value="4">4 (Pentagono)</option>
+                <option value="5">5 (Caos)</option>
+                <option value="6">6 (Guerra Totale)</option>
+            </select>
+        </div>
+        
+        <div style="display: flex; gap: 20px; margin-top: 20px;">
+            <button id="btn-tutorial" onclick="window.location.href='tutorial.html'" style="background: #333; color: #aaa; padding: 15px 30px; border: 1px solid #555; font-family: 'Russo One'; font-size: 18px; cursor: pointer; transition:0.2s;">
+                ? TUTORIAL
+            </button>
+            <button id="btn-start">ESTRAZIONE MAZZIERE</button>
+        </div>
+        
+        <style>
+            #btn-tutorial:hover { background: #444; color: #fff; border-color: #fff; }
+        </style>
+    </div>
+
+    <div id="duel-transition-screen">
+        <div class="duel-text">INDIANA<br>DEFINITIVA</div>
+        <div class="duel-subtext">SOLO UNO SOPRAVVIVE</div>
+    </div>
+
+    <div id="victory-screen">
+        <div class="victory-title">VITTORIA</div>
+        <div id="victory-winner-name" class="victory-name">IL CAPO</div>
+        <button class="game-btn" style="margin-top:50px; font-size:20px; z-index:200;" onclick="location.reload()">NUOVA PARTITA</button>
+    </div>
+
+    <div id="jolly-modal">
+        <div class="jolly-content">
+            <h2 style="color: gold; font-size: 30px;">🟡 ASSO JOLLY</h2>
+            <p style="font-family: 'Share Tech Mono'; color: #aaa;">Definisci il valore della carta</p>
+            <button class="btn-jolly" style="background: linear-gradient(to right, #e67e22, #d35400);" onclick="resolveJollyChoice(true)">MAX (Vinci Tutto)</button>
+            <button class="btn-jolly" style="background: linear-gradient(to right, #3498db, #2980b9);" onclick="resolveJollyChoice(false)">MIN (Perdi Apposta)</button>
+        </div>
+    </div>
+
+    <div id="game-area">
+        
+        <div id="area-top"></div>
+        
+        <div id="area-left" class="side-panel"></div>
+
+        <div id="area-center">
+            <div id="round-info" class="center-msg"></div>
+            <div id="trick-winner-msg" class="center-msg"></div> 
+            <div id="elimination-msg" class="center-msg"></div>
+            <div id="table-cards-container"></div>
+        </div>
+
+        <div id="area-right" class="side-panel"></div>
+
+        <div id="area-player">
+            <div id="controls"></div>
+            
+            <div id="my-player-info">
+                <div id="my-name-display" style="font-family: 'Russo One'; color: #fff;">TU</div>
+                <div style="width:10px;"></div>
+                <div class="heart-container" id="p-lives-container"></div>
+                <div style="font-size: 14px; color: #ccc;">
+                    BID: <span id="p-bid" style="color:gold; font-size:18px; font-weight:bold;">?</span>
+                </div>
+                <div style="font-size: 14px; color: #ccc;">
+                    PRESE: <span id="p-taken" style="color:white; font-size:18px; font-weight:bold;">0</span>
+                </div>
+            </div>
+
+            <div id="bidding-info" style="color: gold; font-size: 12px; margin-bottom: 5px; height: 15px;"></div>
+            <div id="my-cards"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- PARTE 1: DATABASE DI PERSONALITÀ ---
+        const DIALOGUE_DB = {
+            "AGGRESSIVE": {
+                "names": ["Mussolini", "Hitler", "Attila", "Gengis", "Cesare", "Napoleone"],
+                "WIN_TRICK": ["Tutto mio!", "Conquisto anche questo!", "Deboli!", "È solo l'inizio."],
+                "LOSE_LIFE": ["Tradimento!", "Impossibile...", "Contrattacco!", "Pagherete caro."],
+                "ELIMINATED": ["La storia mi assolverà!", "Non è finita qui!", "Cadere in piedi!", "Maledetti alleati!"],
+                "HIGH_BID": ["Vincerò tutto.", "Nessuna pietà.", "Dominio totale."],
+                "LOW_BID": ["Strategia...", "Attendo.", "Meglio non rischiare."]
+            },
+            "PARANOID": {
+                "names": ["Stalin", "Lenin", "Mao", "Fidel", "Kim", "Gheddafi", "Franco"],
+                "WIN_TRICK": ["Proprietà dello Stato.", "Confiscato.", "Tutto secondo i piani.", "Il popolo ringrazia."],
+                "LOSE_LIFE": ["Sabotaggio!", "Chi è la spia?", "Ti mando in Siberia.", "Complotto capitalista!"],
+                "ELIMINATED": ["Il sistema è corrotto!", "Gulag per tutti!", "La rivoluzione fallisce...", "Mi ritiro nel bunker."],
+                "HIGH_BID": ["Ho le carte giuste.", "Il piano quinquennale.", "Successo garantito."],
+                "LOW_BID": ["Sospetto...", "Troppi nemici.", "Basso profilo."]
+            },
+            "SHOWMAN": {
+                "names": ["Trump", "Berlusconi"],
+                "WIN_TRICK": ["Too easy!", "Yuge!", "Grandissimo!", "Mi consenta!", "So much winning!"],
+                "LOSE_LIFE": ["Fake news!", "Rigged!", "Comunisti!", "Sad!", "Witch hunt!"],
+                "ELIMINATED": ["I'll be back!", "Perseguitato!", "They stole it!", "Menomale che Silvio c'è..."],
+                "HIGH_BID": ["I have the best cards.", "Tremendous.", "Ghe pensi mi."],
+                "LOW_BID": ["Let's see.", "Wait and see.", "Non ci credo."]
+            },
+            "ICEMAN": {
+                "names": ["Putin", "Biden", "Churchill"],
+                "WIN_TRICK": ["Mine.", "Special operation success.", "Predictable.", "Good.", "Indubitably."],
+                "LOSE_LIFE": ["Mistake.", "I will remember this.", "Nyet.", "Malarkey.", "Keep calm."],
+                "ELIMINATED": ["Impossible.", "I disappear now.", "You regret this.", "Never surrender!"],
+                "HIGH_BID": ["I take what I want.", "No choice.", "Power.", "We shall win."],
+                "LOW_BID": ["Observing.", "Silence.", "..."]
+            }
+        };
+
+        // --- CONFIGURAZIONE ---
+        const DICTATORS = [
+            "Mussolini", "Hitler", "Stalin", "Napoleone", "Cesare", 
+            "Gheddafi", "Fidel", "Lenin", "Gengis", "Kim", "Franco", "Mao", "Attila",
+            "Trump", "Putin", "Berlusconi", "Biden", "Churchill"
+        ];
+        const ITALIAN_NAMES = ["Gianni", "Mario", "Luigi", "Pasquale", "Gennaro", "Salvatore", "Francesco", "Antonio", "Giuseppe", "Vincenzo", "Carmine", "Roberto", "Davide", "Andrea"];
+        const SEMI = ["Bastoni", "Spade", "Coppe", "Denari"]; 
+        const VALORI = ["A", "2", "3", "4", "5", "6", "7", "Fante", "Cavallo", "Re"];
+        const FILE_MAP = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "Fante": 8, "Cavallo": 9, "Re": 10 };
+
+        let deck = [], players = [], tableCards = [];
+        let cardsToDeal = 5, delta = -1;
+        let jollyCallback = null;
+        let roundStarterCounter = 0;
+        let currentBidsSum = 0;
+        let isDeterminingDealer = false;
+        let initialLives = 3;
+        let initialMaxCards = 5; 
+        let duelModeActive = false; 
+
+        // --- INIT NOME CASUALE ---
+        window.onload = function() {
+            let rnd = ITALIAN_NAMES[Math.floor(Math.random() * ITALIAN_NAMES.length)];
+            document.getElementById("player-name").value = rnd;
+        };
+
+        function sysLog(msg) {
+            const el = document.getElementById("system-log");
+            el.innerHTML = "> " + msg + "<span class='cursor'>_</span>";
+        }
+
+        // --- MOTORE DI CHAT (Legge dal DB) ---
+        function getBotDialogue(name, eventType) {
+            // MAO SPECIAL CASE (Solo Cinese)
+            if (name === "Mao") {
+                const maoPhrases = ["你好", "太棒了", "我们要胜利", "快点", "什么？", "哈哈", "革命", "万岁", "同志", "好！"];
+                return maoPhrases[Math.floor(Math.random() * maoPhrases.length)];
+            }
+
+            let type = "PARANOID"; // Default
+            if (DIALOGUE_DB["AGGRESSIVE"].names.includes(name)) type = "AGGRESSIVE";
+            if (DIALOGUE_DB["SHOWMAN"].names.includes(name)) type = "SHOWMAN";
+            if (DIALOGUE_DB["ICEMAN"].names.includes(name)) type = "ICEMAN";
+            
+            let phrases = DIALOGUE_DB[type][eventType];
+            if (!phrases) return "...";
+            return phrases[Math.floor(Math.random() * phrases.length)];
+        }
+
+        function triggerBotChat(player, eventType) {
+            if (player.isHuman) return;
+            
+            // PROBABILITA' DI PARLARE
+            let prob = 0.4; // 40% standard
+            if (player.name === "Mao") prob = 0.95; // Mao parla sempre
+            if (eventType === "ELIMINATED") prob = 1.0; // Se muore, parla sempre
+
+            if (Math.random() > prob) return;
+
+            let text = getBotDialogue(player.name, eventType);
+            showSpeechBubble(player.name, text);
+        }
+
+        function showSpeechBubble(playerName, text) {
+            let box = document.querySelector(`#box-${playerName}`);
+            if(!box) return;
+
+            let old = box.querySelector(".speech-bubble");
+            if(old) old.remove();
+
+            let bubble = document.createElement("div");
+            bubble.className = "speech-bubble";
+            bubble.innerText = text;
+            
+            // Inserisci DENTRO il box ma posizionato relativo all'avatar
+            // Per ora lo mettiamo nel box, il CSS lo posiziona sopra
+            box.appendChild(bubble);
+
+            requestAnimationFrame(() => { bubble.classList.add("show"); });
+
+            setTimeout(() => {
+                bubble.classList.remove("show");
+                setTimeout(() => bubble.remove(), 300);
+            }, 3000);
+        }
+
+        class Card {
+            constructor(val, sem) {
+                this.valName = val; this.semeName = sem;
+                this.valIdx = VALORI.indexOf(val); this.semeIdx = SEMI.indexOf(sem);
+                this.baseScore = (this.semeIdx * 100) + this.valIdx;
+                this.effectiveScore = this.baseScore;
+            }
+            isJolly() { return this.valName === "A" && this.semeName === "Denari"; }
+            setJollyMode(isMax) { this.effectiveScore = isMax ? 1000 : -1; }
+            resetScore() { this.effectiveScore = this.baseScore; }
+            getImagePath() { return `img/${this.semeName.toLowerCase()}${FILE_MAP[this.valName]}.png`; }
+        }
+
+        class Player {
+            constructor(name, isHuman, lives) {
+                this.name = name; this.isHuman = isHuman;
+                this.lives = lives; this.hand = []; this.bid = -1; this.taken = 0; this.eliminated = false;
+            }
+        }
+
+        // --- START & SETUP ---
+        document.getElementById("btn-start").onclick = function() {
+            let count = parseInt(document.getElementById("bot-count").value);
+            let playerName = document.getElementById("player-name").value.toUpperCase() || "GIOCATORE";
+            initialLives = parseInt(document.getElementById("lives-count").value);
+            initialMaxCards = parseInt(document.getElementById("initial-cards").value);
+
+            cardsToDeal = initialMaxCards;
+
+            document.getElementById("setup-screen").style.display = "none";
+            document.getElementById("game-area").style.display = "grid";
+            
+            document.getElementById("my-name-display").innerText = playerName;
+
+            let randNames = [...DICTATORS].sort(() => 0.5 - Math.random());
+            players = [new Player(playerName, true, initialLives)];
+            for(let i=0; i<count; i++) players.push(new Player(randNames[i], false, initialLives));
+            
+            determineFirstDealer();
+        };
+
+        function createDeck() {
+            deck = [];
+            for(let s of SEMI) for(let v of VALORI) deck.push(new Card(v, s));
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        // --- SORTEGGIO ANIMATO ---
+        function determineFirstDealer() {
+            isDeterminingDealer = true;
+            sysLog("ESTRAZIONE CARTA PIÙ BASSA PER INIZIARE...");
+            createDeck();
+            
+            let drawDeck = [];
+            players.forEach(p => drawDeck.push({p: p, c: deck.pop()}));
+
+            tableCards = []; 
+            updateUI(); 
+
+            let delay = 0;
+            drawDeck.forEach((item, idx) => {
+                setTimeout(() => {
+                    tableCards.push(item);
+                    updateUI();
+                    if(idx === drawDeck.length - 1) resolveDealerDraw(drawDeck);
+                }, idx * 600);
+            });
+        }
+
+        function resolveDealerDraw(drawDeck) {
+            let lowestScore = 9999;
+            let lowestPlayer = null;
+            let lowestIdx = 0;
+
+            drawDeck.forEach((item, index) => {
+                if(item.c.baseScore < lowestScore) {
+                    lowestScore = item.c.baseScore;
+                    lowestPlayer = item.p;
+                    lowestIdx = index;
+                }
+            });
+
+            setTimeout(() => {
+                let infoEl = document.getElementById("round-info");
+                infoEl.innerText = `INIZIA: ${lowestPlayer.name}`;
+                infoEl.style.display = "block";
+                infoEl.style.opacity = "1";
+                infoEl.style.color = "gold";
+                
+                const container = document.getElementById("table-cards-container");
+                let allDivs = container.children;
+                for(let i=0; i<allDivs.length; i++) {
+                     if(tableCards[i].p.name === lowestPlayer.name) {
+                         allDivs[i].style.transform = "scale(1.3)";
+                         allDivs[i].style.zIndex = 100;
+                         allDivs[i].style.borderColor = "gold";
+                         allDivs[i].style.boxShadow = "0 0 30px gold";
+                     } else {
+                         allDivs[i].style.opacity = "0.3";
+                     }
+                }
+                
+                setTimeout(() => {
+                    isDeterminingDealer = false;
+                    roundStarterCounter = players.indexOf(lowestPlayer);
+                    tableCards = [];
+                    infoEl.style.display = "none";
+                    infoEl.style.color = "rgba(255,255,255,0.1)"; 
+                    startRound();
+                }, 3000);
+
+            }, 500);
+        }
+
+        // --- GAME LOGIC ---
+        function startRound() {
+            let active = players.filter(p => !p.eliminated);
+            
+            if (active.length <= 1) {
+                let winnerName = active.length === 1 ? active[0].name : "NESSUNO";
+                showVictoryScreen(winnerName);
+                return;
+            }
+
+            // CONTROLLO DUELLO
+            let isFinalDuel = false;
+            if (active.length === 2) {
+                let anyoneDying = active.some(p => p.lives === 1);
+                if (anyoneDying) isFinalDuel = true;
+            }
+
+            if (isFinalDuel) {
+                cardsToDeal = 1;
+                if (!duelModeActive) {
+                    triggerDuelTransition();
+                    duelModeActive = true;
+                    document.body.classList.add("duel-mode");
+                }
+            } else {
+                let physicalLimit = Math.floor(40 / active.length);
+                if(cardsToDeal > physicalLimit) cardsToDeal = physicalLimit;
+                let currentRoundMax = Math.min(initialMaxCards, physicalLimit);
+                if(cardsToDeal > currentRoundMax) cardsToDeal = currentRoundMax;
+            }
+            
+            let roundLabel = cardsToDeal === 1 ? "INDIANA (1 CARTA)" : `ROUND ${cardsToDeal}`;
+            let infoEl = document.getElementById("round-info");
+            infoEl.innerText = roundLabel;
+            
+            if(duelModeActive) infoEl.style.color = "red";
+            else infoEl.style.color = "rgba(255,255,255,0.1)";
+
+            infoEl.style.display = "block";
+            infoEl.style.opacity = "1";
+            setTimeout(()=> { infoEl.style.opacity = "0.1"; infoEl.style.display="none"; }, 2000);
+
+            sysLog(duelModeActive ? "!!! MODALITÀ DUELLO !!!" : `DISTRIBUZIONE: ${cardsToDeal} CARTE`);
+
+            currentBidsSum = 0;
+            document.getElementById("bidding-info").innerHTML = "";
+
+            createDeck();
+            active.forEach(p => {
+                p.hand = []; p.taken = 0; p.bid = -1;
+                for(let i=0; i<cardsToDeal; i++) {
+                    let c = deck.pop();
+                    c.resetScore();
+                    p.hand.push(c);
+                }
+                if(cardsToDeal > 1) p.hand.sort((a,b) => a.baseScore - b.baseScore);
+            });
+
+            if (isFinalDuel && document.getElementById("duel-transition-screen").style.display === "flex") {
+                 setTimeout(() => {
+                     document.getElementById("duel-transition-screen").style.display = "none";
+                     updateUI();
+                     proceedToBidding(active);
+                 }, 3000);
+            } else {
+                updateUI();
+                proceedToBidding(active);
+            }
+        }
+
+        function proceedToBidding(active) {
+            let starterIndex = roundStarterCounter % active.length;
+            let biddingOrder = [];
+            for(let i=0; i<active.length; i++) biddingOrder.push(active[(starterIndex + i) % active.length]);
+            setTimeout(() => doBidding(0, biddingOrder, biddingOrder), 1000);
+        }
+
+        function triggerDuelTransition() {
+            const screen = document.getElementById("duel-transition-screen");
+            screen.style.display = "flex";
+        }
+
+        function showVictoryScreen(winnerName) {
+            const screen = document.getElementById("victory-screen");
+            const nameEl = document.getElementById("victory-winner-name");
+            nameEl.innerText = winnerName;
+            screen.style.display = "flex";
+            
+            for(let i=0; i<50; i++) {
+                let c = document.createElement("div");
+                c.className = "confetti";
+                c.style.left = Math.random() * 100 + "vw";
+                c.style.animationDuration = (Math.random() * 3 + 2) + "s";
+                c.style.backgroundColor = `hsl(${Math.random()*360}, 100%, 50%)`;
+                screen.appendChild(c);
+            }
+        }
+
+        function doBidding(idx, orderList, fullActiveList) {
+            if (idx >= orderList.length) {
+                document.getElementById("bidding-info").innerHTML = "";
+                tableCards = [];
+                let starterPlayer = orderList[0];
+                let active = players.filter(p => !p.eliminated);
+                let startIdxAbsolute = active.indexOf(starterPlayer);
+                sysLog("FASE DI GIOCO");
+                playTurn(startIdxAbsolute, active);
+                return;
+            }
+
+            let p = orderList[idx];
+            updateUI(p);
+
+            const isLastBidder = (idx === orderList.length - 1);
+            let forbiddenBid = -1;
+            if (isLastBidder) {
+                forbiddenBid = cardsToDeal - currentBidsSum;
+                if(forbiddenBid < 0) forbiddenBid = -1;
+            }
+            
+            let infoMsg = `Somma Attuale: ${currentBidsSum}`;
+            if(isLastBidder && forbiddenBid >= 0) infoMsg += ` | VIETATO DIRE: ${forbiddenBid}`;
+            document.getElementById("bidding-info").innerHTML = infoMsg;
+
+            if (p.isHuman) {
+                showBidButtons(cardsToDeal, forbiddenBid, (val) => {
+                    p.bid = val;
+                    currentBidsSum += val;
+                    doBidding(idx+1, orderList, fullActiveList);
+                });
+            } else {
+                setTimeout(() => {
+                    let prediction = 0;
+                    if(cardsToDeal === 1) {
+                        let dangerDetected = false;
+                        fullActiveList.forEach(op => {
+                            if(op !== p && op.hand.length > 0) {
+                                let score = op.hand[0].baseScore;
+                                if (score >= 280) dangerDetected = true;
+                            }
+                        });
+                        prediction = dangerDetected ? 0 : 1;
+                    } else {
+                        let strength = 0;
+                        p.hand.forEach(c => {
+                            if(c.isJolly()) strength += 1;
+                            else if(c.baseScore >= 305) strength += 1;
+                            else if(c.baseScore >= 208) strength += 0.7;
+                        });
+                        prediction = Math.min(Math.round(strength), cardsToDeal);
+                    }
+
+                    p.bid = prediction;
+                    if (isLastBidder && p.bid === forbiddenBid) {
+                        if (p.bid === 0) p.bid = 1; else p.bid = p.bid - 1;
+                    }
+
+                    showFloatMsg(p.name, `Dice ${p.bid}`);
+                    
+                    if(p.bid === 0) triggerBotChat(p, "LOW_BID");
+                    if(p.bid >= 2) triggerBotChat(p, "HIGH_BID");
+
+                    currentBidsSum += p.bid;
+                    doBidding(idx+1, orderList, fullActiveList);
+                }, 800);
+            }
+        }
+
+        function showFloatMsg(playerName, text) { /* Placeholder */ }
+
+        function playTurn(currentIdx, active) {
+            if (tableCards.length === active.length) {
+                setTimeout(() => resolveTrick(active), 1000);
+                return;
+            }
+
+            let p = active[currentIdx % active.length];
+            updateUI(p);
+
+            if (p.isHuman) {
+                sysLog("TOCCA A TE");
+                enableCards(p, (idx) => {
+                    let card = p.hand[idx];
+                    if (card.isJolly()) {
+                        document.getElementById("jolly-modal").style.display = "flex";
+                        jollyCallback = function(choice) {
+                            card.setJollyMode(choice);
+                            finalizePlayCard(p, idx, card, currentIdx, active);
+                        };
+                    } else {
+                        card.resetScore();
+                        finalizePlayCard(p, idx, card, currentIdx, active);
+                    }
+                });
+            } else {
+                setTimeout(() => {
+                    let chosenIdx = calculateBotMove(p, tableCards);
+                    let card = p.hand[chosenIdx];
+                    if (card.isJolly()) card.setJollyMode(p.taken < p.bid);
+                    else card.resetScore();
+                    finalizePlayCard(p, chosenIdx, card, currentIdx, active);
+                }, 800);
+            }
+        }
+
+        function calculateBotMove(bot, table) {
+            if(bot.hand.length === 1) return 0;
+            let wantToWin = bot.taken < bot.bid;
+            let currentWinnerScore = -10;
+            if (table.length > 0) {
+                let w = table[0];
+                for(let t of table) if(t.c.effectiveScore > w.c.effectiveScore) w = t;
+                currentWinnerScore = w.c.effectiveScore;
+            }
+            let handMapped = bot.hand.map((c, i) => ({c, i})).sort((a,b) => a.c.baseScore - b.c.baseScore);
+            if (table.length === 0) {
+                return wantToWin ? handMapped[handMapped.length - 1].i : handMapped[0].i; 
+            }
+            let winners = handMapped.filter(item => {
+                let score = item.c.isJolly() ? (wantToWin ? 1000 : -1) : item.c.baseScore;
+                return score > currentWinnerScore;
+            });
+            let losers = handMapped.filter(item => {
+                let score = item.c.isJolly() ? (wantToWin ? 1000 : -1) : item.c.baseScore;
+                return score < currentWinnerScore;
+            });
+            if (wantToWin) {
+                return winners.length > 0 ? winners[0].i : handMapped[0].i; 
+            } else {
+                return losers.length > 0 ? losers[losers.length - 1].i : handMapped[handMapped.length - 1].i; 
+            }
+        }
+
+        function resolveJollyChoice(isMax) {
+            document.getElementById("jolly-modal").style.display = "none";
+            if(jollyCallback) jollyCallback(isMax);
+        }
+
+        function finalizePlayCard(player, cardIdx, card, currentIdx, active) {
+            player.hand.splice(cardIdx, 1);
+            tableCards.push({ p: player, c: card });
+            updateUI();
+            playTurn(currentIdx + 1, active);
+        }
+
+        function resolveTrick(active) {
+            let winner = tableCards[0];
+            for(let i=1; i<tableCards.length; i++) {
+                if (tableCards[i].c.effectiveScore > winner.c.effectiveScore) winner = tableCards[i];
+            }
+            winner.p.taken++;
+            
+            // CHAT TRIGGER: WIN
+            triggerBotChat(winner.p, "WIN_TRICK");
+
+            const container = document.getElementById("table-cards-container");
+            const winnerMsg = document.getElementById("trick-winner-msg");
+            
+            winnerMsg.innerText = `HA PRESO ${winner.p.name.toUpperCase()}`;
+            winnerMsg.style.display = "block";
+
+            let allCardDivs = container.children;
+            for(let div of allCardDivs) {
+                if(div.dataset.player !== winner.p.name) {
+                    div.style.opacity = "0.1"; 
+                    div.style.transition = "opacity 0.5s";
+                } else {
+                    div.style.transform = "scale(1.2) rotate(0deg)";
+                    div.style.zIndex = "100";
+                    div.style.transition = "transform 0.5s";
+                }
+            }
+            sysLog(`MANO A ${winner.p.name.toUpperCase()}`);
+
+            setTimeout(() => {
+                tableCards = [];
+                winnerMsg.style.display = "none";
+                updateUI(); 
+
+                if (active[0].hand.length > 0) {
+                    let startIdx = active.indexOf(winner.p);
+                    playTurn(startIdx, active);
+                } else {
+                    endRound(active);
+                }
+            }, 2000);
+        }
+
+        function endRound(active) {
+            let logHtml = "";
+            let deaths = [];
+
+            active.forEach(p => {
+                let diff = Math.abs(p.taken - p.bid);
+                if(diff > 0) {
+                    p.lives -= diff;
+                    triggerBotChat(p, "LOSE_LIFE");
+                    if(p.lives <= 0 && !p.eliminated) {
+                        p.eliminated = true;
+                        deaths.push(p.name);
+                        triggerBotChat(p, "ELIMINATED");
+                    }
+                }
+                
+                let styleClass = diff === 0 ? "log-ok" : "log-err";
+                let txt = diff === 0 ? "OK" : `-${diff}`;
+                logHtml += `<span class="${styleClass}">${p.name}:${txt}</span> `;
+            });
+            sysLog(logHtml);
+            
+            if(deaths.length > 0) {
+                let aliveCount = players.filter(p => !p.eliminated).length;
+                let deathMsgEl = document.getElementById("elimination-msg");
+                
+                let text = `💀 CADUTI: ${deaths.join(", ")}<br><span style="font-size:0.5em; color:white;">RESTANO ${aliveCount} DITTATORI</span>`;
+                deathMsgEl.innerHTML = text;
+                deathMsgEl.style.display = "block";
+
+                setTimeout(() => {
+                    deathMsgEl.style.display = "none";
+                    showNextRoundButton();
+                }, 3500); 
+            } else {
+                showNextRoundButton();
+            }
+            
+            updateUI();
+            roundStarterCounter++;
+        }
+
+        function showNextRoundButton() {
+            let btn = document.createElement("button");
+            btn.className = "game-btn";
+            btn.innerText = "PROSSIMO ROUND >>";
+            btn.onclick = nextStep;
+            document.getElementById("controls").innerHTML = "";
+            document.getElementById("controls").appendChild(btn);
+        }
+
+        function nextStep() {
+            document.getElementById("controls").innerHTML = "";
+            
+            if(delta === -1) {
+                cardsToDeal--;
+                if(cardsToDeal < 1) { cardsToDeal=2; delta=1; }
+            } else {
+                cardsToDeal++;
+                if(cardsToDeal > initialMaxCards) {
+                    cardsToDeal = initialMaxCards - 1;
+                    delta = -1;
+                }
+            }
+            startRound();
+        }
+
+        // --- RENDER UI ---
+        function updateUI(activeP) {
+            const me = players[0];
+            
+            if (!isDeterminingDealer) {
+                let heartsDiv = document.getElementById("p-lives-container");
+                heartsDiv.innerHTML = "";
+                for(let i=0; i<initialLives; i++) {
+                    let h = document.createElement("div");
+                    h.className = "pixel-heart " + (i < me.lives ? "" : "dead");
+                    heartsDiv.appendChild(h);
+                }
+                
+                document.getElementById("p-bid").innerText = me.bid >= 0 ? me.bid : "?";
+                let pTakenEl = document.getElementById("p-taken");
+                pTakenEl.innerText = me.taken;
+                pTakenEl.style.color = "white";
+                if (me.bid >= 0) {
+                    if (me.taken === me.bid) pTakenEl.style.color = "#0f0";
+                    else if (me.taken > me.bid) pTakenEl.style.color = "red";
+                }
+            }
+
+            // CARTE HUMAN
+            const myDiv = document.getElementById("my-cards");
+            myDiv.innerHTML = "";
+            if(!me.eliminated && !isDeterminingDealer) {
+                let totalC = me.hand.length;
+                let centerIdx = (totalC - 1) / 2;
+                
+                me.hand.forEach((c, i) => {
+                    let placeholder = document.createElement("div");
+                    placeholder.className = "card-placeholder";
+                    
+                    if (cardsToDeal === 1) {
+                         placeholder.style.position = "relative"; placeholder.style.transform = "none"; placeholder.style.margin = "0 5px";
+                    } else {
+                        let distFromCenter = i - centerIdx;
+                        let rotate = distFromCenter * 5; 
+                        let translateY = Math.abs(distFromCenter) * 5; 
+                        let translateX = distFromCenter * 45; 
+                        placeholder.style.left = "50%"; placeholder.style.marginLeft = "-42px"; 
+                        placeholder.style.transform = `translateX(${translateX}px) translateY(${translateY}px) rotate(${rotate}deg)`;
+                    }
+                    placeholder.style.zIndex = i + 10;
+
+                    let visual = document.createElement("div");
+                    visual.className = "card-visual";
+                    
+                    if(cardsToDeal === 1) {
+                        visual.className += " back"; 
+                    } else {
+                        visual.style.backgroundImage = `url('${c.getImagePath()}')`;
+                        if(c.isJolly()) { visual.style.boxShadow = "0 0 10px gold"; visual.style.borderColor = "gold"; }
+                    }
+
+                    visual.onclick = function(e) { enableCardsInteraction(i); e.stopPropagation(); };
+                    visual.dataset.idx = i;
+                    placeholder.appendChild(visual);
+                    myDiv.appendChild(placeholder);
+                });
+            }
+
+            // BOTS
+            let areaLeft = document.getElementById("area-left");
+            let areaTop = document.getElementById("area-top");
+            let areaRight = document.getElementById("area-right");
+            areaLeft.innerHTML = ""; areaTop.innerHTML = ""; areaRight.innerHTML = "";
+
+            if (!isDeterminingDealer) {
+                let bots = players.filter(p => !p.isHuman);
+                let total = bots.length;
+                let groupL = [], groupT = [], groupR = [];
+                
+                if (total === 1) { groupT = bots; }
+                else if (total === 2) { groupL=[bots[0]]; groupR=[bots[1]]; }
+                else {
+                    groupL = bots.slice(0, Math.ceil(total/3));
+                    groupT = bots.slice(Math.ceil(total/3), Math.ceil(total/3)*2);
+                    groupR = bots.slice(Math.ceil(total/3)*2);
+                    if(total===3){ groupL=[bots[0]]; groupT=[bots[1]]; groupR=[bots[2]]; }
+                    if(total===4){ groupL=[bots[0]]; groupT=[bots[1], bots[2]]; groupR=[bots[3]]; }
+                }
+
+                renderBotGroup(groupL, areaLeft, activeP);
+                renderBotGroup(groupT, areaTop, activeP);
+                renderBotGroup(groupR, areaRight, activeP);
+            }
+
+            // TABLE
+            const tbl = document.getElementById("table-cards-container");
+            tbl.innerHTML = "";
+            tableCards.forEach((tc) => {
+                let wrapper = document.createElement("div");
+                wrapper.className = "table-card-wrapper";
+                wrapper.dataset.player = tc.p.name; 
+
+                let label = document.createElement("div");
+                label.className = "table-card-label";
+                label.innerText = tc.p.name;
+                
+                let c = document.createElement("div");
+                c.className = "card-table";
+                c.style.backgroundImage = `url('${tc.c.getImagePath()}')`;
+                
+                if (!isDeterminingDealer && !wrapper.style.transform) { 
+                    let randomRot = (tc.c.baseScore % 14) - 7; 
+                    c.style.transform = `rotate(${randomRot}deg)`;
+                }
+
+                if (tc.c.effectiveScore === 1000) { c.style.boxShadow = "0 0 15px gold"; c.style.borderColor="gold"; }
+                
+                wrapper.appendChild(label);
+                wrapper.appendChild(c);
+                tbl.appendChild(wrapper);
+            });
+        }
+
+        function renderBotGroup(list, container, activeP) {
+            list.forEach(p => {
+                let box = document.createElement("div");
+                box.id = `box-${p.name}`;
+                let isActive = activeP && activeP.name === p.name;
+                box.className = "player-box " + (p.eliminated ? "eliminated " : "") + (isActive ? "active" : "");
+                
+                // DEALER BUTTON LOGIC
+                let activePlayers = players.filter(pl => !pl.eliminated);
+                let starterPlayer = activePlayers[roundStarterCounter % activePlayers.length]; 
+                let starterIdxRelative = activePlayers.indexOf(starterPlayer);
+                let dealerIdxRelative = (starterIdxRelative - 1 + activePlayers.length) % activePlayers.length;
+                let dealerPlayer = activePlayers[dealerIdxRelative];
+
+                if (p === dealerPlayer && !p.eliminated) {
+                    let dBtn = document.createElement("div");
+                    dBtn.className = "dealer-btn";
+                    dBtn.innerText = "D";
+                    dBtn.title = "Dealer (Parla per ultimo)";
+                    box.appendChild(dBtn);
+                }
+
+                // AVATAR HTML
+                let portraitName = p.name.toLowerCase().replace(/\s/g, '_') + ".png";
+                let imgPath = `img/portraits/${portraitName}`;
+                // Fallback letter
+                let fallback = p.name.charAt(0);
+
+                let avatarHtml = `
+                    <div class="avatar-frame">
+                        <img src="${imgPath}" class="avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                        <div class="avatar-fallback" style="display:none;">${fallback}</div>
+                    </div>
+                `;
+
+                let heartsHtml = `<div class="heart-container">`;
+                for(let i=0; i<initialLives; i++) {
+                    heartsHtml += `<div class="pixel-heart ${i<p.lives?'':'dead'}"></div>`;
+                }
+                heartsHtml += `</div>`;
+                
+                let handHtml = `<div class="bot-hand">`;
+                if(!p.eliminated) {
+                    p.hand.forEach(c => {
+                        if(cardsToDeal === 1) { 
+                            handHtml += `<div class="card-table" style="width:25px; height:38px; background-image:url('${c.getImagePath()}'); background-size:cover; margin:0 2px;"></div>`;
+                        } else {
+                            handHtml += `<div class="card-back-mini"></div>`;
+                        }
+                    });
+                }
+                handHtml += `</div>`;
+
+                let takenClass = "taken";
+                if(p.bid >= 0) {
+                    if (p.taken === p.bid) takenClass += " ok";
+                    else if (p.taken > p.bid) takenClass += " danger";
+                }
+
+                box.innerHTML += `
+                    ${avatarHtml}
+                    <div class="p-name">${p.name}</div>
+                    ${heartsHtml}
+                    <div class="stats-row">
+                        <div class="stat-badge bid">BID: ${p.bid>=0?p.bid:"-"}</div>
+                        <div class="stat-badge ${takenClass}">TOT: ${p.taken}</div>
+                    </div>
+                    ${handHtml}
+                `;
+                container.appendChild(box);
+            });
+        }
+
+        function showBidButtons(max, forbiddenBid, cb) {
+            let c = document.getElementById("controls");
+            c.innerHTML = "";
+            for(let i=0; i<=max; i++) {
+                let b = document.createElement("button");
+                b.className = "game-btn";
+                b.innerText = i;
+                if (i === forbiddenBid) {
+                    b.disabled = true;
+                    b.style.opacity = "0.2";
+                }
+                b.onclick = () => { c.innerHTML=""; cb(i); };
+                c.appendChild(b);
+            }
+        }
+
+        let cardClickCallback = null;
+        function enableCards(p, cb) { cardClickCallback = cb; }
+        function enableCardsInteraction(idx) {
+            if (cardClickCallback) {
+                let cb = cardClickCallback;
+                cardClickCallback = null; 
+                cb(idx);
+            }
+        }
+    </script>
+</body>
+</html>
