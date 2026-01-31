@@ -1,6 +1,25 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { LEAGUES } from '../utils/constants';
+
+// Get gradient colors based on league
+const getLeagueGradient = (leagueId) => {
+  switch (leagueId) {
+    case 'bronze':
+      return ['#CD7F32', '#8B4513', '#CD7F32'];
+    case 'silver':
+      return ['#C0C0C0', '#808080', '#C0C0C0'];
+    case 'gold':
+      return ['#FFD700', '#FFA500', '#FFD700'];
+    case 'platinum':
+      return ['#E5E4E2', '#A8A8A8', '#E5E4E2'];
+    case 'diamond':
+      return ['#B9F2FF', '#87CEEB', '#B9F2FF'];
+    default:
+      return ['#333', '#222', '#333'];
+  }
+};
 
 export function LeagueCard({ league, coins, onPress }) {
   const canAfford = coins >= league.entryFee;
@@ -10,32 +29,56 @@ export function LeagueCard({ league, coins, onPress }) {
     <TouchableOpacity
       style={[
         styles.container,
-        { borderColor: league.color },
         !canAfford && styles.disabled,
       ]}
       onPress={onPress}
       disabled={!canAfford}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
     >
-      <View style={[styles.header, { backgroundColor: league.color }]}>
-        <Text style={styles.leagueName}>{league.name}</Text>
-      </View>
-      
-      <View style={styles.content}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Ingresso:</Text>
-          <Text style={styles.value}>🪙 {league.entryFee}</Text>
-        </View>
-        
-        <View style={styles.row}>
-          <Text style={styles.label}>Premio:</Text>
-          <Text style={[styles.value, styles.reward]}>🪙 {league.reward}</Text>
+      <LinearGradient
+        colors={getLeagueGradient(league.id)}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientContainer}
+      >
+        <View style={styles.innerCard}>
+          <View style={styles.leftSection}>
+            <Text style={styles.leagueEmoji}>
+              {league.id === 'diamond' ? '💎' : 
+               league.id === 'platinum' ? '⚪' :
+               league.id === 'gold' ? '🏆' :
+               league.id === 'silver' ? '🥈' : '🥉'}
+            </Text>
+          </View>
+          
+          <View style={styles.centerSection}>
+            <Text style={styles.leagueName}>{league.name.toUpperCase()}</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Ingresso</Text>
+                <Text style={styles.statValue}>🪙 {league.entryFee}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Premio</Text>
+                <Text style={[styles.statValue, styles.rewardValue]}>🪙 {league.reward}</Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.rightSection}>
+            <View style={[styles.playButton, !canAfford && styles.playButtonDisabled]}>
+              <Text style={styles.playButtonText}>{canAfford ? '▶' : '🔒'}</Text>
+            </View>
+          </View>
         </View>
         
         {!canAfford && (
-          <Text style={styles.lockedText}>Monete insufficienti</Text>
+          <View style={styles.lockedOverlay}>
+            <Text style={styles.lockedText}>Monete insufficienti</Text>
+          </View>
         )}
-      </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
@@ -52,66 +95,129 @@ export function LeagueBadge({ leagueId }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
-    borderRadius: 12,
-    borderWidth: 2,
-    marginVertical: 8,
+    marginVertical: 10,
     marginHorizontal: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+  gradientContainer: {
+    borderRadius: 20,
+    padding: 3,
+  },
+  innerCard: {
+    backgroundColor: 'rgba(20, 20, 30, 0.95)',
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    minHeight: 100,
+  },
+  leftSection: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  leagueEmoji: {
+    fontSize: 32,
+  },
+  centerSection: {
+    flex: 1,
+  },
+  leagueName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 2,
+    marginBottom: 10,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    alignItems: 'flex-start',
+  },
+  statLabel: {
+    color: '#aaa',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  statValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rewardValue: {
+    color: '#4CAF50',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#444',
+    marginHorizontal: 15,
+  },
+  rightSection: {
+    marginLeft: 10,
+  },
+  playButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#c0392b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#c0392b',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
     shadowRadius: 5,
     elevation: 5,
   },
-  disabled: {
-    opacity: 0.5,
+  playButtonDisabled: {
+    backgroundColor: '#444',
   },
-  header: {
-    padding: 12,
+  playButtonText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  lockedOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 0,
+    right: 0,
     alignItems: 'center',
   },
-  leagueName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  content: {
-    padding: 15,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 5,
-  },
-  label: {
-    color: '#888',
-    fontSize: 14,
-  },
-  value: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  reward: {
-    color: '#4CAF50',
-  },
   lockedText: {
-    color: '#ff5555',
+    color: '#ff6b6b',
     fontSize: 12,
-    textAlign: 'center',
-    marginTop: 10,
-    fontStyle: 'italic',
-  },
-  badge: {
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 10,
   },
+  badge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   badgeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#000',
   },

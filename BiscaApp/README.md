@@ -59,15 +59,25 @@ npx expo start --android
 npx expo start --web
 ```
 
-### Build per Android (APK/AAB)
+### Build per Android (APK)
+
+Per creare un file APK installabile direttamente su dispositivi Android:
 
 ```bash
-# Build preview APK
-npx expo build:android -t apk
+# 1. Assicurati di avere EAS CLI installato
+npm install -g eas-cli
 
-# O usa EAS Build
-npx eas build --platform android
+# 2. Se non l'hai già fatto, effettua il login su Expo
+eas login
+
+# 3. Build APK in cloud (consigliato)
+npm run build:apk
+
+# Oppure build locale (richiede Android SDK)
+npm run build:apk:local
 ```
+
+Il file APK verrà generato e potrai scaricarlo/installarlo direttamente sul tuo telefono Android.
 
 ## 📂 Struttura del Progetto
 
