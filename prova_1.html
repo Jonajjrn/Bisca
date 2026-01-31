@@ -123,7 +123,6 @@
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
         /* --- NEW AVATAR & BUBBLE STYLES --- */
-        
         .avatar-frame {
             width: 50px; height: 50px;
             border-radius: 50%;
@@ -195,11 +194,10 @@
             z-index: 50; box-shadow: 0 0 5px var(--gold);
         }
 
-        /* --- GRIGLIA DI GIOCO AGGIORNATA PER SPAZIO IN ALTO --- */
+        /* --- GRIGLIA DI GIOCO --- */
         #game-area { 
             flex-grow: 1; display: none; 
             grid-template-columns: 220px 1fr 220px;
-            /* Aumentato primo valore da 140px a 200px per evitare tagli in alto */
             grid-template-rows: 200px 1fr 260px;
             height: 100%; width: 100%;
         }
@@ -343,9 +341,9 @@
 </head>
 <body>
 
-    <div id="system-log">Inizializzazione Sistema Bisca v.3.0...</div>
+    <div id="system-log">Inizializzazione Sistema Bisca v.3.1...</div>
 
- <div id="setup-screen">
+    <div id="setup-screen">
         <h1 class="main-title">BISCA</h1>
         <h3 style="color: #888; margin-top:0px; font-family: 'Share Tech Mono'; letter-spacing: 2px;">DICTATOR EDITION</h3>
         
@@ -504,6 +502,9 @@
         let initialLives = 3;
         let initialMaxCards = 5; 
         let duelModeActive = false; 
+        
+        // Nuova variabile per gestire l'alternanza nel duello finale
+        let duelRoundCounter = 0;
 
         // --- INIT NOME CASUALE ---
         window.onload = function() {
@@ -516,9 +517,8 @@
             el.innerHTML = "> " + msg + "<span class='cursor'>_</span>";
         }
 
-        // --- MOTORE DI CHAT (Legge dal DB) ---
+        // --- MOTORE DI CHAT ---
         function getBotDialogue(name, eventType) {
-            // MAO SPECIAL CASE (Solo Cinese)
             if (name === "Mao") {
                 const maoPhrases = ["你好", "太棒了", "我们要胜利", "快点", "什么？", "哈哈", "革命", "万岁", "同志", "好！"];
                 return maoPhrases[Math.floor(Math.random() * maoPhrases.length)];
@@ -537,10 +537,9 @@
         function triggerBotChat(player, eventType) {
             if (player.isHuman) return;
             
-            // PROBABILITA' DI PARLARE
-            let prob = 0.4; // 40% standard
-            if (player.name === "Mao") prob = 0.95; // Mao parla sempre
-            if (eventType === "ELIMINATED") prob = 1.0; // Se muore, parla sempre
+            let prob = 0.4; 
+            if (player.name === "Mao") prob = 0.95; 
+            if (eventType === "ELIMINATED") prob = 1.0; 
 
             if (Math.random() > prob) return;
 
@@ -558,9 +557,6 @@
             let bubble = document.createElement("div");
             bubble.className = "speech-bubble";
             bubble.innerText = text;
-            
-            // Inserisci DENTRO il box ma posizionato relativo all'avatar
-            // Per ora lo mettiamo nel box, il CSS lo posiziona sopra
             box.appendChild(bubble);
 
             requestAnimationFrame(() => { bubble.classList.add("show"); });
@@ -707,11 +703,33 @@
 
             if (isFinalDuel) {
                 cardsToDeal = 1;
+                
+                // GESTIONE STARTER DUELLO
                 if (!duelModeActive) {
+                    // Primo round del duello: inizia chi ha meno vite (che è 1)
                     triggerDuelTransition();
                     duelModeActive = true;
                     document.body.classList.add("duel-mode");
+                    duelRoundCounter = 0; // Reset contatore duelli
+
+                    // Trova chi ha meno vite
+                    let weakPlayer = active[0].lives < active[1].lives ? active[0] : active[1];
+                    // Se hanno vite uguali (entrambi 1), lasciamo il giro normale
+                    if (active[0].lives === active[1].lives) {
+                        // Nessuna modifica, continua la rotazione normale
+                    } else {
+                        // Forza lo starter a essere il giocatore debole
+                        // roundStarterCounter deve puntare all'indice di questo giocatore nella lista globale 'players'
+                        roundStarterCounter = players.indexOf(weakPlayer);
+                    }
+                } else {
+                    // Round successivi del duello: ALTERNANZA FORZATA
+                    // A ogni nuovo round duello, spostiamo lo starter di 1 rispetto all'active list
+                    // Nota: In endRound facciamo già roundStarterCounter++, che in un 1vs1 alterna automaticamente.
+                    // Quindi la logica standard funziona già per l'alternanza!
+                    // L'intervento speciale serve solo al PRIMO round del duello.
                 }
+
             } else {
                 let physicalLimit = Math.floor(40 / active.length);
                 if(cardsToDeal > physicalLimit) cardsToDeal = physicalLimit;

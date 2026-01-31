@@ -4,8 +4,6 @@
 
 Il giocatore ("Il Capo") deve sopravvivere a un tavolo pieno di personalità storiche e politiche note per il loro... "carattere forte". Non vince chi ha le carte migliori, ma chi sa prevedere il futuro.
 
-![Screenshot del Gioco](https://via.placeholder.com/800x450.png?text=Anteprima+Gioco) *(Sostituisci con uno screenshot reale)*
-
 ## ✨ Funzionalità Chiave
 
 * **♦️ Gameplay Strategico:** All'inizio di ogni round devi scommettere ("Bid") esattamente quante mani vincerai. Ogni errore ti costa una vita.
