@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Bisca: Dictator Edition",
+    "slug": "BiscaApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bisca.dictatoredition"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#121212"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.bisca.dictatoredition"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "description": "A strategic card game where you play against dictators. Win coins, climb leagues, and become the ultimate champion!"
+    }
+  }
+}
