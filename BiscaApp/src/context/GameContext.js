@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loadPlayerData, savePlayerData } from '../utils/storage';
-import { INITIAL_PLAYER_DATA } from '../utils/constants';
+import { INITIAL_PLAYER_DATA, LEAGUES } from '../utils/constants';
 
 const GameContext = createContext();
 
@@ -41,13 +41,20 @@ export function GameProvider({ children }) {
     return false;
   };
 
-  const recordGameResult = async (won, league) => {
+  const recordGameResult = async (won, leagueId) => {
     const updates = {
       gamesPlayed: playerData.gamesPlayed + 1,
     };
     
     if (won) {
       updates.gamesWon = playerData.gamesWon + 1;
+      
+      // Update highest league if the won league is higher
+      const currentLeagueIdx = LEAGUES.findIndex((l) => l.id === playerData.highestLeague);
+      const wonLeagueIdx = LEAGUES.findIndex((l) => l.id === leagueId);
+      if (wonLeagueIdx > currentLeagueIdx) {
+        updates.highestLeague = leagueId;
+      }
     }
     
     await updatePlayerData(updates);

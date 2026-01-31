@@ -67,8 +67,20 @@ export function createDeck() {
 
 // Get bot dialogue based on personality
 export function getBotDialogue(name, eventType) {
+  // Special case: Mao speaks only in Chinese
   if (name === 'Mao') {
-    const maoPhrases = ['你好', '太棒了', '我们要胜利', '快点', '什么？', '哈哈', '革命', '万岁', '同志', '好！'];
+    const maoPhrases = [
+      '你好',     // Hello
+      '太棒了',   // Great
+      '我们要胜利', // We will win
+      '快点',     // Hurry up
+      '什么？',   // What?
+      '哈哈',     // Haha
+      '革命',     // Revolution
+      '万岁',     // Long live
+      '同志',     // Comrade
+      '好！',     // Good!
+    ];
     return maoPhrases[Math.floor(Math.random() * maoPhrases.length)];
   }
 

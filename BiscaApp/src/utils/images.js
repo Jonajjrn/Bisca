@@ -64,6 +64,6 @@ export function getCardImage(imageName) {
 }
 
 export function getPortraitImage(name) {
-  const key = name.toLowerCase().replace(/\s/g, '_');
-  return portraitImages[key] || null;
+  const normalizedName = name.toLowerCase().replace(/\s/g, '_');
+  return portraitImages[normalizedName] || null;
 }
