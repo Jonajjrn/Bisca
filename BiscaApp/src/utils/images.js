@@ -42,28 +42,6 @@ const cardImages = {
   denari10: require('../assets/cards/denari10.png'),
 };
 
-// Only include portraits that exist in the assets folder
-const portraitImages = {
-  mussolini: require('../assets/portraits/mussolini.png'),
-  hitler: require('../assets/portraits/hitler.png'),
-  napoleone: require('../assets/portraits/napoleone.png'),
-  cesare: require('../assets/portraits/cesare.png'),
-  gheddafi: require('../assets/portraits/gheddafi.png'),
-  fidel: require('../assets/portraits/fidel.png'),
-  gengis: require('../assets/portraits/gengis.png'),
-  kim: require('../assets/portraits/kim.png'),
-  franco: require('../assets/portraits/franco.png'),
-  mao: require('../assets/portraits/mao.png'),
-  trump: require('../assets/portraits/trump.png'),
-  putin: require('../assets/portraits/putin.png'),
-  berlusconi: require('../assets/portraits/berlusconi.png'),
-};
-
 export function getCardImage(imageName) {
   return cardImages[imageName] || cardImages.bastoni1;
-}
-
-export function getPortraitImage(name) {
-  const normalizedName = name.toLowerCase().replace(/\s/g, '_');
-  return portraitImages[normalizedName] || null;
 }

@@ -62,10 +62,10 @@ export default function GameScreen({ navigation, route }) {
   }, []);
 
   const initGame = () => {
-    const botNames = getRandomBotNames(gameSettings.botCount);
+    const botOpponents = getRandomBotNames(gameSettings.botCount);
     const newPlayers = [
-      new Player(playerData.name, true, gameSettings.lives),
-      ...botNames.map((name) => new Player(name, false, gameSettings.lives)),
+      new Player(playerData.name, true, gameSettings.lives, playerData.avatar || '🎴', null),
+      ...botOpponents.map((opp) => new Player(opp.name, false, gameSettings.lives, opp.emoji, opp.personality)),
     ];
     setPlayers(newPlayers);
     setCardsToDeal(gameSettings.maxCards);
@@ -134,12 +134,24 @@ export default function GameScreen({ navigation, route }) {
       return;
     }
 
+    // Check for SUDDEN DEATH mode: 1v1 and at least one player has only 1 life
+    const isSuddenDeath = active.length === 2 && active.some((p) => p.lives === 1);
+
     // Calculate max cards based on active players
     const physicalLimit = Math.floor(40 / active.length);
-    const actualCards = Math.min(cards, physicalLimit, gameSettings.maxCards);
+    let actualCards = Math.min(cards, physicalLimit, gameSettings.maxCards);
+    
+    // In sudden death mode, force 1 card (Indiana mode)
+    if (isSuddenDeath) {
+      actualCards = 1;
+    }
+    
     setCardsToDeal(actualCards);
 
-    const roundLabel = actualCards === 1 ? 'INDIANA (1 CARTA)' : `ROUND ${actualCards} CARTE`;
+    let roundLabel = actualCards === 1 ? 'INDIANA (1 CARTA)' : `ROUND ${actualCards} CARTE`;
+    if (isSuddenDeath) {
+      roundLabel = '⚔️ SUDDEN DEATH ⚔️';
+    }
     setMessage(roundLabel);
 
     // Deal cards
@@ -170,7 +182,7 @@ export default function GameScreen({ navigation, route }) {
     const starterIndex = starterIdx % active.length;
     setTimeout(() => {
       doBidding(0, active, starterIndex, currentPlayers, actualCards);
-    }, 2000);
+    }, isSuddenDeath ? 3000 : 2000);
   };
 
   const doBidding = (idx, activeList, starterIdx, allPlayers, cards) => {
@@ -455,11 +467,12 @@ export default function GameScreen({ navigation, route }) {
 
   const triggerSpeech = (player, eventType) => {
     if (player.isHuman) return;
+    if (!player.personality) return;
     
-    const prob = player.name === 'Mao' ? 0.95 : eventType === 'ELIMINATED' ? 1.0 : 0.4;
+    const prob = eventType === 'ELIMINATED' ? 1.0 : 0.4;
     if (Math.random() > prob) return;
 
-    const text = getBotDialogue(player.name, eventType);
+    const text = getBotDialogue(player.name, eventType, player.personality);
     setSpeechBubble({ player: player.name, text });
     
     setTimeout(() => {
@@ -507,30 +520,57 @@ export default function GameScreen({ navigation, route }) {
         <Text style={styles.messageText}>{message}</Text>
       </View>
 
-      {/* Bot Players */}
-      <ScrollView 
-        horizontal 
-        style={styles.botsContainer}
-        contentContainerStyle={styles.botsContent}
-        showsHorizontalScrollIndicator={false}
-      >
-        {bots.map((bot) => (
-          <View key={bot.name} style={styles.botWrapper}>
-            <PlayerBox
-              player={bot}
-              isActive={activePlayer === bot}
-              isDealer={dealerPlayer === bot}
-              showCards={isIndiana}
-              cardsToDeal={cardsToDeal}
-            />
-            {speechBubble.player === bot.name && (
-              <View style={styles.speechBubble}>
-                <Text style={styles.speechText}>{speechBubble.text}</Text>
-              </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
+      {/* Bot Players - Positioned around the table */}
+      <View style={styles.botsContainer}>
+        {bots.map((bot, index) => {
+          // Position bots around the top/sides based on count
+          const totalBots = bots.length;
+          let positionStyle = {};
+          
+          if (totalBots === 1) {
+            positionStyle = { alignSelf: 'center' };
+          } else if (totalBots === 2) {
+            positionStyle = index === 0 
+              ? { alignSelf: 'flex-start', marginLeft: 20 } 
+              : { alignSelf: 'flex-end', marginRight: 20 };
+          } else {
+            // Spread across for 3+ bots
+            const isLeft = index < totalBots / 2;
+            const isCenter = totalBots % 2 === 1 && index === Math.floor(totalBots / 2);
+            if (isCenter) {
+              positionStyle = { alignSelf: 'center' };
+            } else if (isLeft) {
+              positionStyle = { alignSelf: 'flex-start', marginLeft: 10 + (index * 5) };
+            } else {
+              positionStyle = { alignSelf: 'flex-end', marginRight: 10 + ((totalBots - 1 - index) * 5) };
+            }
+          }
+          
+          return (
+            <View 
+              key={bot.name} 
+              style={[
+                styles.botWrapper,
+                positionStyle,
+                { transform: [{ scale: 0.9 }] }
+              ]}
+            >
+              <PlayerBox
+                player={bot}
+                isActive={activePlayer === bot}
+                isDealer={dealerPlayer === bot}
+                showCards={isIndiana}
+                cardsToDeal={cardsToDeal}
+              />
+              {speechBubble.player === bot.name && (
+                <View style={styles.speechBubble}>
+                  <Text style={styles.speechText}>{speechBubble.text}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
 
       {/* Table Cards */}
       <View style={styles.tableContainer}>
@@ -589,25 +629,42 @@ export default function GameScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Player Hand */}
+        {/* Player Hand - Fan Layout */}
         {human && !human.eliminated && (
-          <ScrollView 
-            horizontal 
-            style={styles.handContainer}
-            contentContainerStyle={styles.handContent}
-            showsHorizontalScrollIndicator={false}
-          >
-            {human.hand.map((card, i) => (
-              <View key={i} style={styles.cardWrapper}>
-                <CardComponent
-                  card={card}
-                  isHidden={isIndiana}
-                  isJolly={card.isJolly()}
-                  onPress={gamePhase === 'playing' && isHumanTurn && !cardPlayedRef.current ? () => handleCardPlay(i) : null}
-                />
-              </View>
-            ))}
-          </ScrollView>
+          <View style={styles.handContainer}>
+            <View style={styles.fanContainer}>
+              {human.hand.map((card, i) => {
+                const totalCards = human.hand.length;
+                const middleIndex = (totalCards - 1) / 2;
+                const rotationAngle = (i - middleIndex) * 8; // 8 degrees per card from center
+                const translateY = Math.abs(i - middleIndex) * 5; // Lift cards as they spread
+                
+                return (
+                  <View 
+                    key={i} 
+                    style={[
+                      styles.fanCardWrapper,
+                      { 
+                        transform: [
+                          { rotate: `${rotationAngle}deg` },
+                          { translateY: translateY },
+                        ],
+                        marginLeft: i === 0 ? 0 : -25, // Overlap cards
+                        zIndex: i,
+                      }
+                    ]}
+                  >
+                    <CardComponent
+                      card={card}
+                      isHidden={isIndiana}
+                      isJolly={card.isJolly()}
+                      onPress={gamePhase === 'playing' && isHumanTurn && !cardPlayedRef.current ? () => handleCardPlay(i) : null}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          </View>
         )}
 
         {/* Next Round / End Game Buttons */}
@@ -666,7 +723,7 @@ export default function GameScreen({ navigation, route }) {
                   ],
                 },
               ]}>
-                <Text style={styles.dealerAnimEmoji}>🎴</Text>
+                <Text style={styles.dealerAnimEmoji}>{dealerAnimationPlayer.emoji || '🎴'}</Text>
                 <Text style={styles.dealerAnimName}>{dealerAnimationPlayer.name}</Text>
               </Animated.View>
             )}
@@ -738,14 +795,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   botsContainer: {
-    maxHeight: 180,
-  },
-  botsContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 10,
-    alignItems: 'center',
+    paddingVertical: 5,
+    maxHeight: 200,
   },
   botWrapper: {
-    marginHorizontal: 8,
+    marginHorizontal: 4,
+    marginVertical: 4,
     position: 'relative',
   },
   speechBubble: {
@@ -868,14 +928,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   handContainer: {
-    maxHeight: 130,
-  },
-  handContent: {
-    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingBottom: 20,
   },
-  cardWrapper: {
-    marginHorizontal: 5,
+  fanContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  fanCardWrapper: {
+    // Transform is applied dynamically in component
   },
   endButtons: {
     alignItems: 'center',

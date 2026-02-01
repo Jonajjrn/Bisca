@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bisca: Dictator Edition",
+    "name": "Bisca",
     "slug": "BiscaApp",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "description": "A strategic card game where you play against dictators. Win coins, climb leagues, and become the ultimate champion!"
+      "description": "Un gioco di carte strategico dove sfidi avversari intelligenti. Vinci monete, scala le leghe e diventa il campione!"
     }
   }
 }

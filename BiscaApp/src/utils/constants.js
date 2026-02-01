@@ -46,44 +46,114 @@ export const SEMI = ['Bastoni', 'Spade', 'Coppe', 'Denari'];
 export const VALORI = ['A', '2', '3', '4', '5', '6', '7', 'Fante', 'Cavallo', 'Re'];
 export const FILE_MAP = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, 'Fante': 8, 'Cavallo': 9, 'Re': 10 };
 
-export const DICTATORS = [
-  'Mussolini', 'Hitler', 'Napoleone', 'Cesare',
-  'Gheddafi', 'Fidel', 'Gengis', 'Kim', 'Franco', 'Mao',
-  'Trump', 'Putin', 'Berlusconi',
+// Job-based opponents with emojis
+export const OPPONENTS = [
+  { name: 'Chef', emoji: '👨‍🍳', personality: 'PASSIONATE' },
+  { name: 'Medico', emoji: '👨‍⚕️', personality: 'CAREFUL' },
+  { name: 'Pilota', emoji: '👨‍✈️', personality: 'CONFIDENT' },
+  { name: 'Scienziato', emoji: '👨‍🔬', personality: 'ANALYTICAL' },
+  { name: 'Artista', emoji: '👨‍🎨', personality: 'CREATIVE' },
+  { name: 'Pompiere', emoji: '👨‍🚒', personality: 'BRAVE' },
+  { name: 'Contadino', emoji: '👨‍🌾', personality: 'PATIENT' },
+  { name: 'Meccanico', emoji: '👨‍🔧', personality: 'PRACTICAL' },
+  { name: 'Insegnante', emoji: '👩‍🏫', personality: 'WISE' },
+  { name: 'Detective', emoji: '🕵️', personality: 'CLEVER' },
+  { name: 'Astronauta', emoji: '👨‍🚀', personality: 'ADVENTUROUS' },
+  { name: 'Giudice', emoji: '👨‍⚖️', personality: 'FAIR' },
+  { name: 'Cantante', emoji: '🧑‍🎤', personality: 'SHOWMAN' },
 ];
 
 export const DIALOGUE_DB = {
-  AGGRESSIVE: {
-    names: ['Mussolini', 'Hitler', 'Gengis', 'Cesare', 'Napoleone'],
-    WIN_TRICK: ['Tutto mio!', 'Conquisto anche questo!', 'Deboli!', 'È solo l\'inizio.'],
-    LOSE_LIFE: ['Tradimento!', 'Impossibile...', 'Contrattacco!', 'Pagherete caro.'],
-    ELIMINATED: ['La storia mi assolverà!', 'Non è finita qui!', 'Cadere in piedi!', 'Maledetti alleati!'],
-    HIGH_BID: ['Vincerò tutto.', 'Nessuna pietà.', 'Dominio totale.'],
-    LOW_BID: ['Strategia...', 'Attendo.', 'Meglio non rischiare.'],
+  PASSIONATE: {
+    WIN_TRICK: ['Perfetto!', 'Ottima mossa!', 'Delizioso!', 'Che soddisfazione!'],
+    LOSE_LIFE: ['Bruciato!', 'No no no...', 'Devo riprovarci!', 'Che disastro!'],
+    ELIMINATED: ['La cucina chiude...', 'Meglio tornare ai fornelli!', 'Ho perso l\'appetito!'],
+    HIGH_BID: ['Punto tutto!', 'Sono sicuro!', 'Ci metto la firma!'],
+    LOW_BID: ['Un pizzico solo...', 'Piano piano...', 'Con moderazione.'],
   },
-  PARANOID: {
-    names: ['Mao', 'Fidel', 'Kim', 'Gheddafi', 'Franco'],
-    WIN_TRICK: ['Proprietà dello Stato.', 'Confiscato.', 'Tutto secondo i piani.', 'Il popolo ringrazia.'],
-    LOSE_LIFE: ['Sabotaggio!', 'Chi è la spia?', 'Ti mando in Siberia.', 'Complotto capitalista!'],
-    ELIMINATED: ['Il sistema è corrotto!', 'Gulag per tutti!', 'La rivoluzione fallisce...', 'Mi ritiro nel bunker.'],
-    HIGH_BID: ['Ho le carte giuste.', 'Il piano quinquennale.', 'Successo garantito.'],
-    LOW_BID: ['Sospetto...', 'Troppi nemici.', 'Basso profilo.'],
+  CAREFUL: {
+    WIN_TRICK: ['Ben calcolato.', 'Come previsto.', 'Ottima diagnosi.', 'Precisione.'],
+    LOSE_LIFE: ['Errore di valutazione.', 'Devo ricalcolare.', 'Non previsto.'],
+    ELIMINATED: ['Paziente perso...', 'Fallimento.', 'Serve una pausa.'],
+    HIGH_BID: ['Analisi completa.', 'I numeri dicono sì.', 'Rischio calcolato.'],
+    LOW_BID: ['Meglio essere cauti.', 'Non rischiare.', 'Attendere e vedere.'],
+  },
+  CONFIDENT: {
+    WIN_TRICK: ['Atterraggio perfetto!', 'In volo!', 'Destinazione raggiunta!', 'Roger!'],
+    LOSE_LIFE: ['Turbolenze!', 'Mayday...', 'Rotta sbagliata!'],
+    ELIMINATED: ['Volo cancellato.', 'Atterraggio di emergenza.', 'Ritorno alla base.'],
+    HIGH_BID: ['Decollo immediato!', 'Obiettivo in vista!', 'Tutti a bordo!'],
+    LOW_BID: ['In attesa...', 'Controllo meteo.', 'Prudenza.'],
+  },
+  ANALYTICAL: {
+    WIN_TRICK: ['Ipotesi confermata!', 'Dati corretti.', 'Eureka!', 'Logico.'],
+    LOSE_LIFE: ['Variabile imprevista.', 'Errore nel calcolo.', 'Dati insufficienti.'],
+    ELIMINATED: ['Esperimento fallito.', 'Torno al laboratorio.', 'Serve più ricerca.'],
+    HIGH_BID: ['Probabilità favorevole.', 'I dati sono chiari.', 'Matematicamente probabile.'],
+    LOW_BID: ['Incertezza elevata.', 'Margine di errore.', 'Campione limitato.'],
+  },
+  CREATIVE: {
+    WIN_TRICK: ['Capolavoro!', 'Arte pura!', 'Bellissimo!', 'Ispirazione!'],
+    LOSE_LIFE: ['Critica severa...', 'Non apprezzato.', 'Blocco creativo!'],
+    ELIMINATED: ['Fine dell\'esposizione.', 'Torno a creare.', 'L\'arte è sofferenza!'],
+    HIGH_BID: ['Visione artistica!', 'Oso tutto!', 'Creatività al massimo!'],
+    LOW_BID: ['Minimalismo.', 'Meno è più.', 'Semplicità.'],
+  },
+  BRAVE: {
+    WIN_TRICK: ['Fuoco spento!', 'Missione compiuta!', 'Eroe!', 'Salvi!'],
+    LOSE_LIFE: ['Fiamme troppo alte!', 'Ritirata tattica!', 'Bruciato!'],
+    ELIMINATED: ['Sirene spente...', 'Emergenza finita male.', 'Torno in caserma.'],
+    HIGH_BID: ['All\'attacco!', 'Nessuna paura!', 'Coraggio!'],
+    LOW_BID: ['Prudenza.', 'Valuto i rischi.', 'Piano B.'],
+  },
+  PATIENT: {
+    WIN_TRICK: ['Buon raccolto!', 'Pazienza ripagata.', 'Stagione buona.', 'Naturale.'],
+    LOSE_LIFE: ['Grandine!', 'Siccità...', 'Raccolto perso.'],
+    ELIMINATED: ['Campo abbandonato.', 'Torno alla terra.', 'Riproverò.'],
+    HIGH_BID: ['Terreno fertile.', 'Buone previsioni.', 'Semina abbondante.'],
+    LOW_BID: ['Con calma...', 'Aspettiamo.', 'Tempo al tempo.'],
+  },
+  PRACTICAL: {
+    WIN_TRICK: ['Riparato!', 'Funziona!', 'Sistemato!', 'Perfetto!'],
+    LOSE_LIFE: ['Si è rotto!', 'Serve un ricambio.', 'Guasto imprevisto!'],
+    ELIMINATED: ['Officina chiusa.', 'Attrezzi a posto.', 'Torno domani.'],
+    HIGH_BID: ['Ho gli attrezzi giusti.', 'Progetto solido.', 'Ci penso io.'],
+    LOW_BID: ['Meglio controllare.', 'Manutenzione.', 'Un passo alla volta.'],
+  },
+  WISE: {
+    WIN_TRICK: ['Lezione imparata!', 'Eccellente!', 'Bravo!', 'Voto alto!'],
+    LOSE_LIFE: ['Bocciato!', 'Serve più studio.', 'Errore da matita rossa.'],
+    ELIMINATED: ['Campanella finale.', 'Fine lezione.', 'A ripetizione!'],
+    HIGH_BID: ['Ho studiato bene.', 'Preparato!', 'Conoscenza solida.'],
+    LOW_BID: ['Dubbi...', 'Serve ripasso.', 'Umiltà.'],
+  },
+  CLEVER: {
+    WIN_TRICK: ['Caso risolto!', 'Elementare!', 'Indizio giusto!', 'Trovato!'],
+    LOSE_LIFE: ['Pista falsa...', 'Mi hanno fregato!', 'Devo ricominciare.'],
+    ELIMINATED: ['Caso irrisolto.', 'Torno all\'ufficio.', 'Mistero.'],
+    HIGH_BID: ['Ho le prove.', 'Intuizione.', 'Tutto torna.'],
+    LOW_BID: ['Mancano indizi.', 'Troppi sospetti.', 'Osservo.'],
+  },
+  ADVENTUROUS: {
+    WIN_TRICK: ['Spaziale!', 'Orbita perfetta!', 'Stelle allineate!', 'Houston, ce l\'ho fatta!'],
+    LOSE_LIFE: ['Buco nero!', 'Ossigeno finito!', 'Meteora in arrivo!'],
+    ELIMINATED: ['Missione abortita.', 'Ritorno sulla Terra.', 'Lo spazio è infinito...'],
+    HIGH_BID: ['Lancio imminente!', 'Conto alla rovescia!', 'Verso le stelle!'],
+    LOW_BID: ['Controlli in corso.', 'Orbita stabile.', 'Attesa.'],
+  },
+  FAIR: {
+    WIN_TRICK: ['Sentenza!', 'Giustizia!', 'Verdetto chiaro!', 'Caso chiuso!'],
+    LOSE_LIFE: ['Obiezione!', 'Appello!', 'Ingiustizia!'],
+    ELIMINATED: ['Corte aggiornata.', 'Fine del processo.', 'Ritiro la toga.'],
+    HIGH_BID: ['Prove schiaccianti.', 'Testimonianza solida.', 'Giuro.'],
+    LOW_BID: ['Dubbio ragionevole.', 'Prove insufficienti.', 'Attendo.'],
   },
   SHOWMAN: {
-    names: ['Trump', 'Berlusconi'],
-    WIN_TRICK: ['Too easy!', 'Yuge!', 'Grandissimo!', 'Mi consenta!', 'So much winning!'],
-    LOSE_LIFE: ['Fake news!', 'Rigged!', 'Comunisti!', 'Sad!', 'Witch hunt!'],
-    ELIMINATED: ['I\'ll be back!', 'Perseguitato!', 'They stole it!', 'Menomale che Silvio c\'è...'],
-    HIGH_BID: ['I have the best cards.', 'Tremendous.', 'Ghe pensi mi.'],
-    LOW_BID: ['Let\'s see.', 'Wait and see.', 'Non ci credo.'],
-  },
-  ICEMAN: {
-    names: ['Putin'],
-    WIN_TRICK: ['Mine.', 'Special operation success.', 'Predictable.', 'Good.'],
-    LOSE_LIFE: ['Mistake.', 'I will remember this.', 'Nyet.'],
-    ELIMINATED: ['Impossible.', 'I disappear now.', 'You regret this.'],
-    HIGH_BID: ['I take what I want.', 'No choice.', 'Power.'],
-    LOW_BID: ['Observing.', 'Silence.', '...'],
+    WIN_TRICK: ['Bravo!', 'Applausi!', 'Bis!', 'Standing ovation!'],
+    LOSE_LIFE: ['Stecca!', 'Fischi!', 'Palco sbagliato!'],
+    ELIMINATED: ['Cala il sipario.', 'Ultimo atto.', 'Esco di scena.'],
+    HIGH_BID: ['Lo show deve continuare!', 'Pubblico mio!', 'Grande finale!'],
+    LOW_BID: ['Riscaldamento.', 'Prima prova.', 'Piano.'],
   },
 };
 
@@ -99,12 +169,13 @@ export const DIALOGUE_DB = {
  */
 export const INITIAL_PLAYER_DATA = {
   name: 'Giocatore',
-  coins: 100,
+  coins: 50,
   gamesPlayed: 0,
   gamesWon: 0,
   highestLeague: 'bronze',
   avatar: '🎴',
   hasCompletedOnboarding: false,
+  hasCompletedTutorial: false,
 };
 
 // Avatar options for profile creation

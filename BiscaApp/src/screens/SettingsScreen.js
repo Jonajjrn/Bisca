@@ -46,7 +46,7 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             await updatePlayerData({
-              coins: 100,
+              coins: 50,
               gamesPlayed: 0,
               gamesWon: 0,
               highestLeague: 'bronze',
