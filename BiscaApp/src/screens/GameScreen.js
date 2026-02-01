@@ -55,7 +55,6 @@ export default function GameScreen({ navigation, route }) {
   const [isHumanTurn, setIsHumanTurn] = useState(false);
   const [showDealerAnimation, setShowDealerAnimation] = useState(false);
   const [dealerAnimationPlayer, setDealerAnimationPlayer] = useState(null);
-  const [finalDealerPlayer, setFinalDealerPlayer] = useState(null);
   const [turnPlayersPlayed, setTurnPlayersPlayed] = useState(0);
   const [isSuddenDeath, setIsSuddenDeath] = useState(false);
   
@@ -118,7 +117,6 @@ export default function GameScreen({ navigation, route }) {
         // Final dealer selected - show the correct final player
         const finalDealer = playerList[randomIndex];
         setDealerAnimationPlayer(finalDealer);
-        setFinalDealerPlayer(finalDealer);
         setDealerIndex(randomIndex);
         setTrickStarterIndex(randomIndex);
         
@@ -188,9 +186,9 @@ export default function GameScreen({ navigation, route }) {
     setIsHumanTurn(false);
     cardPlayedRef.current = false;
 
-    // Bidding starts from dealer
+    // Bidding starts from dealer - use name matching for robustness
     const dealerPlayer = currentPlayers[dealerIdx % currentPlayers.length];
-    const starterIdx = active.findIndex(p => p === dealerPlayer);
+    const starterIdx = active.findIndex(p => p.name === dealerPlayer.name);
     const starterIndex = starterIdx >= 0 ? starterIdx : 0;
     
     setTimeout(() => {
@@ -272,7 +270,7 @@ export default function GameScreen({ navigation, route }) {
 
     const humanIdx = active.indexOf(human);
     const dealerPlayer = players[dealerIndex % players.length];
-    const dealerIdx = active.findIndex(p => p === dealerPlayer);
+    const dealerIdx = active.findIndex(p => p.name === dealerPlayer.name);
     const dealerActiveIdx = dealerIdx >= 0 ? dealerIdx : 0;
     const bidIdx = (humanIdx - dealerActiveIdx + active.length) % active.length;
 
@@ -384,9 +382,9 @@ export default function GameScreen({ navigation, route }) {
       }
     }
 
-    // Find the player in the activeList that matches the winner by reference
-    // tableCards stores the actual player objects, so we can use reference comparison
-    const winnerPlayer = activeList.find(p => p === winnerEntry.player);
+    // Find the player in the activeList that matches the winner using name-based matching
+    // This is more robust than reference comparison since player objects may be recreated
+    const winnerPlayer = activeList.find(p => p.name === winnerEntry.player.name);
     
     if (winnerPlayer) {
       winnerPlayer.taken++;
@@ -395,20 +393,15 @@ export default function GameScreen({ navigation, route }) {
       
       // Update the trick starter for next trick
       const winnerIdx = activeList.indexOf(winnerPlayer);
-      setTrickStarterIndex(winnerIdx >= 0 ? winnerIdx : 0);
-    } else {
-      // Fallback: if reference comparison fails, use name matching
-      const winnerByName = activeList.find(p => p.name === winnerEntry.player.name);
-      if (winnerByName) {
-        winnerByName.taken++;
-        triggerSpeech(winnerByName, 'WIN_TRICK');
-        setMessage(`🎯 Presa di ${winnerByName.name}!`);
-        const winnerIdx = activeList.indexOf(winnerByName);
-        setTrickStarterIndex(winnerIdx >= 0 ? winnerIdx : 0);
+      if (winnerIdx >= 0) {
+        setTrickStarterIndex(winnerIdx);
       } else {
-        console.error('Winner player not found in active list');
-        setMessage(`Mano completata`);
+        // This should not happen since we just found the player, but handle it gracefully
+        console.warn('Winner found but indexOf returned -1, keeping current trick starter');
       }
+    } else {
+      console.error('Winner player not found in active list');
+      setMessage(`Mano completata`);
     }
     
     setPlayers([...allPlayers]);
@@ -594,7 +587,7 @@ export default function GameScreen({ navigation, route }) {
               ]}
             >
               {/* Dealer badge */}
-              {players[dealerIndex] === bot && (
+              {players.indexOf(bot) === dealerIndex % players.length && (
                 <View style={styles.dealerBadge}>
                   <Text style={styles.dealerBadgeText}>D</Text>
                 </View>
@@ -683,7 +676,7 @@ export default function GameScreen({ navigation, route }) {
           
           {/* Center: Player info */}
           <View style={styles.dashboardCenter}>
-            {human && players[dealerIndex] === human && (
+            {human && players.indexOf(human) === dealerIndex % players.length && (
               <View style={styles.dealerIndicator}>
                 <Text style={styles.dealerIndicatorText}>MAZZIERE</Text>
               </View>
