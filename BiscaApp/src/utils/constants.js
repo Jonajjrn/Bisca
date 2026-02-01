@@ -1,5 +1,8 @@
 // Game Constants
 
+// Game name
+export const GAME_NAME = 'BISCA';
+
 // Premium Dark Theme Colors
 export const COLORS = {
   // Background

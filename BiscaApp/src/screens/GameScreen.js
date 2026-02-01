@@ -26,6 +26,11 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// Card fan layout constants
+const CARD_FAN_ROTATION_DEGREES = 8;
+const CARD_FAN_LIFT_OFFSET = 5;
+const CARD_OVERLAP_OFFSET = -25;
+
 export default function GameScreen({ navigation, route }) {
   const { league: leagueId } = route.params;
   const { playerData, addCoins, recordGameResult, gameSettings } = useGame();
@@ -212,8 +217,10 @@ export default function GameScreen({ navigation, route }) {
     const isLastBidder = idx === activeList.length - 1;
     let forbidden = -1;
     if (isLastBidder) {
+      // Calculate what bid would make total bids equal to cards (which is forbidden)
       forbidden = cards - currentBidsSum;
-      if (forbidden < 0) forbidden = -1;
+      // Only forbid if it's a valid bid option (0 to cards)
+      if (forbidden < 0 || forbidden > cards) forbidden = -1;
     }
     setForbiddenBid(forbidden);
 
@@ -636,8 +643,8 @@ export default function GameScreen({ navigation, route }) {
               {human.hand.map((card, i) => {
                 const totalCards = human.hand.length;
                 const middleIndex = (totalCards - 1) / 2;
-                const rotationAngle = (i - middleIndex) * 8; // 8 degrees per card from center
-                const translateY = Math.abs(i - middleIndex) * 5; // Lift cards as they spread
+                const rotationAngle = (i - middleIndex) * CARD_FAN_ROTATION_DEGREES;
+                const translateY = Math.abs(i - middleIndex) * CARD_FAN_LIFT_OFFSET;
                 
                 return (
                   <View 
@@ -649,7 +656,7 @@ export default function GameScreen({ navigation, route }) {
                           { rotate: `${rotationAngle}deg` },
                           { translateY: translateY },
                         ],
-                        marginLeft: i === 0 ? 0 : -25, // Overlap cards
+                        marginLeft: i === 0 ? 0 : CARD_OVERLAP_OFFSET,
                         zIndex: i,
                       }
                     ]}

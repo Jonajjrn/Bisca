@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
-import { COLORS, AVATAR_OPTIONS } from '../utils/constants';
+import { COLORS, AVATAR_OPTIONS, GAME_NAME } from '../utils/constants';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -178,7 +178,7 @@ export default function OnboardingScreen({ navigation }) {
         },
       ]}
     >
-      <Text style={styles.gameTitle}>BISCA</Text>
+      <Text style={styles.gameTitle}>{GAME_NAME}</Text>
       <TouchableOpacity
         onPress={handleCardSwipe}
         activeOpacity={0.9}

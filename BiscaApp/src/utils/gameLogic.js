@@ -69,6 +69,7 @@ export function createDeck() {
 
 // Get bot dialogue based on personality
 export function getBotDialogue(name, eventType, personality) {
+  if (!personality) return '...';
   const phrases = DIALOGUE_DB[personality]?.[eventType];
   if (!phrases) return '...';
   return phrases[Math.floor(Math.random() * phrases.length)];
