@@ -1,4 +1,4 @@
-import { SEMI, VALORI, FILE_MAP, DIALOGUE_DB, DICTATORS } from './constants';
+import { SEMI, VALORI, FILE_MAP, DIALOGUE_DB, OPPONENTS } from './constants';
 
 // Card class representation
 export class Card {
@@ -30,7 +30,7 @@ export class Card {
 
 // Player class representation
 export class Player {
-  constructor(name, isHuman, lives) {
+  constructor(name, isHuman, lives, emoji = null, personality = null) {
     this.name = name;
     this.isHuman = isHuman;
     this.lives = lives;
@@ -38,6 +38,8 @@ export class Player {
     this.bid = -1;
     this.taken = 0;
     this.eliminated = false;
+    this.emoji = emoji;
+    this.personality = personality;
   }
 
   reset(lives) {
@@ -66,30 +68,9 @@ export function createDeck() {
 }
 
 // Get bot dialogue based on personality
-export function getBotDialogue(name, eventType) {
-  // Special case: Mao speaks only in Chinese
-  if (name === 'Mao') {
-    const maoPhrases = [
-      '你好',     // Hello
-      '太棒了',   // Great
-      '我们要胜利', // We will win
-      '快点',     // Hurry up
-      '什么？',   // What?
-      '哈哈',     // Haha
-      '革命',     // Revolution
-      '万岁',     // Long live
-      '同志',     // Comrade
-      '好！',     // Good!
-    ];
-    return maoPhrases[Math.floor(Math.random() * maoPhrases.length)];
-  }
-
-  let type = 'PARANOID';
-  if (DIALOGUE_DB.AGGRESSIVE.names.includes(name)) type = 'AGGRESSIVE';
-  if (DIALOGUE_DB.SHOWMAN.names.includes(name)) type = 'SHOWMAN';
-  if (DIALOGUE_DB.ICEMAN.names.includes(name)) type = 'ICEMAN';
-
-  const phrases = DIALOGUE_DB[type][eventType];
+export function getBotDialogue(name, eventType, personality) {
+  if (!personality) return '...';
+  const phrases = DIALOGUE_DB[personality]?.[eventType];
   if (!phrases) return '...';
   return phrases[Math.floor(Math.random() * phrases.length)];
 }
@@ -158,8 +139,8 @@ export function calculateBotBid(bot, cardsToDeal, activePlayers, isIndiana) {
   return Math.min(Math.round(strength), cardsToDeal);
 }
 
-// Get random bot names
+// Get random bot opponents with emojis
 export function getRandomBotNames(count) {
-  const shuffled = [...DICTATORS].sort(() => 0.5 - Math.random());
+  const shuffled = [...OPPONENTS].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }

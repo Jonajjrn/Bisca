@@ -1,12 +1,10 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { getPortraitImage } from '../utils/images';
 import { CardBack } from './Card';
 import { COLORS } from '../utils/constants';
+import { getCardImage } from '../utils/images';
 
 export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }) {
-  const portraitSource = getPortraitImage(player.name);
-  
   const getBidStatusStyle = () => {
     if (player.bid < 0) return {};
     if (player.taken === player.bid) return { backgroundColor: 'rgba(46, 204, 113, 0.3)', borderColor: COLORS.success };
@@ -27,13 +25,9 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
       )}
       
       <View style={[styles.avatarFrame, isActive && styles.avatarFrameActive]}>
-        {portraitSource ? (
-          <Image source={portraitSource} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarLetter}>{player.name.charAt(0)}</Text>
-          </View>
-        )}
+        <View style={styles.avatarFallback}>
+          <Text style={styles.avatarEmoji}>{player.emoji || '🎴'}</Text>
+        </View>
       </View>
       
       <Text style={styles.playerName} numberOfLines={1}>{player.name}</Text>
@@ -61,7 +55,7 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
             showCards && cardsToDeal === 1 ? (
               <View key={i} style={styles.miniCardContainer}>
                 <Image 
-                  source={require('../utils/images').getCardImage(card.getImageName())}
+                  source={getCardImage(card.getImageName())}
                   style={styles.miniCard}
                   resizeMode="cover"
                 />
@@ -135,20 +129,14 @@ const styles = StyleSheet.create({
   avatarFrameActive: {
     borderColor: COLORS.denari,
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
   avatarFallback: {
     flex: 1,
     backgroundColor: COLORS.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarLetter: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.textSecondary,
+  avatarEmoji: {
+    fontSize: 28,
   },
   playerName: {
     color: COLORS.textPrimary,

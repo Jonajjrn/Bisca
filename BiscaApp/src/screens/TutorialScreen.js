@@ -12,9 +12,9 @@ import { COLORS } from '../utils/constants';
 
 const SLIDES = [
   {
-    title: 'BENVENUTO, GENERALE',
+    title: 'BENVENUTO A BISCA! 🎴',
     content: [
-      'La tua missione è sopravvivere in un tavolo pieno di dittatori paranoici e megalomani.',
+      'La tua missione è sopravvivere al tavolo sfidando avversari astuti.',
       'Non vince chi ha le carte migliori, ma chi sa PREVEDERE IL FUTURO.',
     ],
   },
@@ -63,11 +63,15 @@ const SLIDES = [
     rules: [
       {
         name: "REGOLA DELL'ULTIMO",
-        desc: "L'ultimo giocatore a parlare (il Mazziere) non può chiamare un numero che faccia tornare i conti esatti.",
+        desc: "L'ultimo giocatore a parlare (il Mazziere) non può chiamare un numero che faccia tornare i conti esatti. Qualcuno deve per forza sbagliare!",
       },
       {
         name: 'INDIANA (1 Carta)',
-        desc: 'Nel round da 1 sola carta, vedi le carte di tutti gli altri sulla loro fronte, ma NON VEDI LA TUA.',
+        desc: 'Nel round da 1 sola carta, vedi le carte di tutti gli altri sulla loro fronte, ma NON VEDI LA TUA. Devi scommettere alla cieca!',
+      },
+      {
+        name: 'SUDDEN DEATH',
+        desc: 'Quando rimangono solo 2 giocatori e uno ha una sola vita, si entra in modalità duello finale!',
       },
     ],
   },
@@ -86,7 +90,7 @@ export default function TutorialScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>MANUALE DEL DITTATORE</Text>
+        <Text style={styles.headerTitle}>MANUALE DI BISCA</Text>
         <View style={styles.backButton} />
       </View>
 
