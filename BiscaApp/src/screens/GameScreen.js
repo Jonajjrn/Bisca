@@ -186,11 +186,11 @@ export default function GameScreen({ navigation, route }) {
     // Start bidding
     const starterIndex = starterIdx % active.length;
     setTimeout(() => {
-      doBidding(0, active, starterIndex, currentPlayers, actualCards);
+      doBidding(0, active, starterIndex, currentPlayers, actualCards, 0);
     }, isSuddenDeath ? 3000 : 2000);
   };
 
-  const doBidding = (idx, activeList, starterIdx, allPlayers, cards) => {
+  const doBidding = (idx, activeList, starterIdx, allPlayers, cards, runningBidsSum) => {
     if (idx >= activeList.length) {
       // Bidding complete, start playing
       setMessage('Fase di gioco');
@@ -218,7 +218,7 @@ export default function GameScreen({ navigation, route }) {
     let forbidden = -1;
     if (isLastBidder) {
       // Calculate what bid would make total bids equal to cards (which is forbidden)
-      forbidden = cards - currentBidsSum;
+      forbidden = cards - runningBidsSum;
       // Only forbid if it's a valid bid option (0 to cards)
       if (forbidden < 0 || forbidden > cards) forbidden = -1;
     }
@@ -238,7 +238,8 @@ export default function GameScreen({ navigation, route }) {
         }
 
         p.bid = bid;
-        setCurrentBidsSum((prev) => prev + bid);
+        const newBidsSum = runningBidsSum + bid;
+        setCurrentBidsSum(newBidsSum);
         
         // Show bot dialogue
         if (bid === 0) triggerSpeech(p, 'LOW_BID');
@@ -248,7 +249,7 @@ export default function GameScreen({ navigation, route }) {
         setPlayers([...allPlayers]);
 
         setTimeout(() => {
-          doBidding(idx + 1, activeList, starterIdx, allPlayers, cards);
+          doBidding(idx + 1, activeList, starterIdx, allPlayers, cards, newBidsSum);
         }, 800);
       }, 1000);
     }
