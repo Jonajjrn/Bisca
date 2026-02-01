@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Modal,
   Alert,
   Dimensions,
   Animated,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
 import { CardComponent, CardBack } from '../components/Card';
-import { PlayerBox } from '../components/PlayerBox';
-import { LEAGUES } from '../utils/constants';
+import { LEAGUES, COLORS } from '../utils/constants';
+import { getCardImage } from '../utils/images';
 import {
   Player,
   createDeck,
@@ -24,12 +24,12 @@ import {
   getBotDialogue,
 } from '../utils/gameLogic';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Card fan layout constants
-const CARD_FAN_ROTATION_DEGREES = 8;
-const CARD_FAN_LIFT_OFFSET = 5;
-const CARD_OVERLAP_OFFSET = -25;
+const CARD_FAN_ROTATION_DEGREES = 6;
+const CARD_FAN_LIFT_OFFSET = 4;
+const CARD_OVERLAP_OFFSET = -20;
 
 export default function GameScreen({ navigation, route }) {
   const { league: leagueId } = route.params;
@@ -41,10 +41,10 @@ export default function GameScreen({ navigation, route }) {
   const [tableCards, setTableCards] = useState([]);
   const [cardsToDeal, setCardsToDeal] = useState(gameSettings.maxCards);
   const [delta, setDelta] = useState(-1);
-  const [roundStarterIndex, setRoundStarterIndex] = useState(0);
+  const [dealerIndex, setDealerIndex] = useState(0);
+  const [trickStarterIndex, setTrickStarterIndex] = useState(0);
   const [currentBidsSum, setCurrentBidsSum] = useState(0);
-  const [gamePhase, setGamePhase] = useState('init'); // init, dealerSelect, bidding, playing, roundEnd, gameOver
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [gamePhase, setGamePhase] = useState('init');
   const [activePlayer, setActivePlayer] = useState(null);
   const [message, setMessage] = useState('');
   const [showJollyModal, setShowJollyModal] = useState(false);
@@ -56,10 +56,11 @@ export default function GameScreen({ navigation, route }) {
   const [showDealerAnimation, setShowDealerAnimation] = useState(false);
   const [dealerAnimationPlayer, setDealerAnimationPlayer] = useState(null);
   const [turnPlayersPlayed, setTurnPlayersPlayed] = useState(0);
+  const [isSuddenDeath, setIsSuddenDeath] = useState(false);
   
   // Animation refs
   const dealerAnimValue = useRef(new Animated.Value(0)).current;
-  const cardPlayedRef = useRef(false); // Prevent double card plays
+  const cardPlayedRef = useRef(false);
 
   // Initialize game
   useEffect(() => {
@@ -76,10 +77,9 @@ export default function GameScreen({ navigation, route }) {
     setCardsToDeal(gameSettings.maxCards);
     setDelta(-1);
     setTableCards([]);
-    setMessage('Selezione mazziere...');
+    setMessage('Estrazione mazziere...');
     setGamePhase('dealerSelect');
     
-    // Random dealer selection animation
     setTimeout(() => {
       selectRandomDealer(newPlayers);
     }, 500);
@@ -88,7 +88,7 @@ export default function GameScreen({ navigation, route }) {
   const selectRandomDealer = (playerList) => {
     const randomIndex = Math.floor(Math.random() * playerList.length);
     let animationCount = 0;
-    const totalAnimations = playerList.length * 2 + randomIndex; // Spin around twice then land on random
+    const totalAnimations = playerList.length * 2 + randomIndex;
     
     setShowDealerAnimation(true);
     
@@ -96,11 +96,10 @@ export default function GameScreen({ navigation, route }) {
       const currentIdx = animationCount % playerList.length;
       setDealerAnimationPlayer(playerList[currentIdx]);
       
-      // Animate pulse
       Animated.sequence([
         Animated.timing(dealerAnimValue, {
           toValue: 1,
-          duration: 100 + (animationCount * 10), // Slow down over time
+          duration: 100 + (animationCount * 10),
           useNativeDriver: true,
         }),
         Animated.timing(dealerAnimValue, {
@@ -113,24 +112,29 @@ export default function GameScreen({ navigation, route }) {
       animationCount++;
       
       if (animationCount < totalAnimations) {
-        setTimeout(animateDealer, 150 + (animationCount * 20)); // Slow down
+        setTimeout(animateDealer, 150 + (animationCount * 20));
       } else {
-        // Final dealer selected
-        setRoundStarterIndex(randomIndex);
-        setShowDealerAnimation(false);
-        setDealerAnimationPlayer(null);
-        setMessage(`${playerList[randomIndex].name} è il mazziere!`);
+        // Final dealer selected - show the correct final player
+        const finalDealer = playerList[randomIndex];
+        setDealerAnimationPlayer(finalDealer);
+        setDealerIndex(randomIndex);
+        setTrickStarterIndex(randomIndex);
         
         setTimeout(() => {
-          startRound(playerList, gameSettings.maxCards, randomIndex);
-        }, 1500);
+          setShowDealerAnimation(false);
+          setMessage(`${finalDealer.name} è il mazziere!`);
+          
+          setTimeout(() => {
+            startRound(playerList, gameSettings.maxCards, randomIndex);
+          }, 1500);
+        }, 1000);
       }
     };
     
     animateDealer();
   };
 
-  const startRound = (currentPlayers, cards, starterIdx) => {
+  const startRound = (currentPlayers, cards, dealerIdx) => {
     const active = currentPlayers.filter((p) => !p.eliminated);
     
     if (active.length <= 1) {
@@ -139,22 +143,21 @@ export default function GameScreen({ navigation, route }) {
       return;
     }
 
-    // Check for SUDDEN DEATH mode: 1v1 and at least one player has only 1 life
-    const isSuddenDeath = active.length === 2 && active.some((p) => p.lives === 1);
+    // Check for SUDDEN DEATH mode
+    const suddenDeath = active.length === 2 && active.some((p) => p.lives === 1);
+    setIsSuddenDeath(suddenDeath);
 
-    // Calculate max cards based on active players
     const physicalLimit = Math.floor(40 / active.length);
     let actualCards = Math.min(cards, physicalLimit, gameSettings.maxCards);
     
-    // In sudden death mode, force 1 card (Indiana mode)
-    if (isSuddenDeath) {
+    if (suddenDeath) {
       actualCards = 1;
     }
     
     setCardsToDeal(actualCards);
 
-    let roundLabel = actualCards === 1 ? 'INDIANA (1 CARTA)' : `ROUND ${actualCards} CARTE`;
-    if (isSuddenDeath) {
+    let roundLabel = actualCards === 1 ? '🎯 INDIANA (1 CARTA)' : `ROUND ${actualCards} CARTE`;
+    if (suddenDeath) {
       roundLabel = '⚔️ SUDDEN DEATH ⚔️';
     }
     setMessage(roundLabel);
@@ -183,16 +186,18 @@ export default function GameScreen({ navigation, route }) {
     setIsHumanTurn(false);
     cardPlayedRef.current = false;
 
-    // Start bidding
-    const starterIndex = starterIdx % active.length;
+    // Bidding starts from dealer - use name matching for robustness
+    const dealerPlayer = currentPlayers[dealerIdx % currentPlayers.length];
+    const starterIdx = active.findIndex(p => p.name === dealerPlayer.name);
+    const starterIndex = starterIdx >= 0 ? starterIdx : 0;
+    
     setTimeout(() => {
       doBidding(0, active, starterIndex, currentPlayers, actualCards, 0);
-    }, isSuddenDeath ? 3000 : 2000);
+    }, suddenDeath ? 3000 : 2000);
   };
 
   const doBidding = (idx, activeList, starterIdx, allPlayers, cards, runningBidsSum) => {
     if (idx >= activeList.length) {
-      // Bidding complete, start playing
       setMessage('Fase di gioco');
       setForbiddenBid(-1);
       setTableCards([]);
@@ -200,8 +205,8 @@ export default function GameScreen({ navigation, route }) {
       setGamePhase('playing');
       cardPlayedRef.current = false;
       
-      // The dealer (starterIdx) leads the first trick
-      setRoundStarterIndex(starterIdx);
+      // First player after dealer leads the first trick
+      setTrickStarterIndex(0);
       
       setTimeout(() => {
         playTurn(0, activeList, allPlayers, cards);
@@ -212,14 +217,11 @@ export default function GameScreen({ navigation, route }) {
     const orderIdx = (starterIdx + idx) % activeList.length;
     const p = activeList[orderIdx];
     setActivePlayer(p);
-    setCurrentPlayerIndex(idx);
 
     const isLastBidder = idx === activeList.length - 1;
     let forbidden = -1;
     if (isLastBidder) {
-      // Calculate what bid would make total bids equal to cards (which is forbidden)
       forbidden = cards - runningBidsSum;
-      // Only forbid if it's a valid bid option (0 to cards)
       if (forbidden < 0 || forbidden > cards) forbidden = -1;
     }
     setForbiddenBid(forbidden);
@@ -228,8 +230,9 @@ export default function GameScreen({ navigation, route }) {
       setMessage(isLastBidder && forbidden >= 0 
         ? `Scommetti (non puoi dire ${forbidden})`
         : 'Fai la tua scommessa');
+      setIsHumanTurn(true);
     } else {
-      // Bot bidding
+      setIsHumanTurn(false);
       setTimeout(() => {
         let bid = calculateBotBid(p, cards, activeList, cards === 1);
         
@@ -241,7 +244,6 @@ export default function GameScreen({ navigation, route }) {
         const newBidsSum = runningBidsSum + bid;
         setCurrentBidsSum(newBidsSum);
         
-        // Show bot dialogue
         if (bid === 0) triggerSpeech(p, 'LOW_BID');
         if (bid >= 2) triggerSpeech(p, 'HIGH_BID');
         
@@ -261,22 +263,24 @@ export default function GameScreen({ navigation, route }) {
     if (!human) return;
 
     human.bid = bid;
-    setCurrentBidsSum((prev) => prev + bid);
+    const newBidsSum = currentBidsSum + bid;
+    setCurrentBidsSum(newBidsSum);
     setPlayers([...players]);
+    setIsHumanTurn(false);
 
-    const starterIdx = roundStarterIndex % active.length;
     const humanIdx = active.indexOf(human);
-    const bidIdx = (humanIdx - starterIdx + active.length) % active.length;
+    const dealerPlayer = players[dealerIndex % players.length];
+    const dealerIdx = active.findIndex(p => p.name === dealerPlayer.name);
+    const dealerActiveIdx = dealerIdx >= 0 ? dealerIdx : 0;
+    const bidIdx = (humanIdx - dealerActiveIdx + active.length) % active.length;
 
     setTimeout(() => {
-      doBidding(bidIdx + 1, active, starterIdx, players, cardsToDeal);
+      doBidding(bidIdx + 1, active, dealerActiveIdx, players, cardsToDeal, newBidsSum);
     }, 500);
   };
 
   const playTurn = (playersAlreadyPlayed, activeList, allPlayers, cards) => {
-    // Check if all players have played this trick
     if (playersAlreadyPlayed >= activeList.length) {
-      // All players have played, resolve trick
       setIsHumanTurn(false);
       cardPlayedRef.current = false;
       setTimeout(() => {
@@ -285,11 +289,9 @@ export default function GameScreen({ navigation, route }) {
       return;
     }
 
-    // Get current player based on round starter and how many have played
-    const currentIdx = (roundStarterIndex + playersAlreadyPlayed) % activeList.length;
+    const currentIdx = (trickStarterIndex + playersAlreadyPlayed) % activeList.length;
     const p = activeList[currentIdx];
     setActivePlayer(p);
-    setCurrentPlayerIndex(playersAlreadyPlayed);
     setTurnPlayersPlayed(playersAlreadyPlayed);
 
     if (p.isHuman) {
@@ -298,7 +300,6 @@ export default function GameScreen({ navigation, route }) {
       setMessage('Tocca a te - Scegli una carta');
     } else {
       setIsHumanTurn(false);
-      // Bot plays
       setTimeout(() => {
         const chosenIdx = calculateBotMove(p, tableCards);
         if (chosenIdx < 0 || chosenIdx >= p.hand.length) {
@@ -325,17 +326,12 @@ export default function GameScreen({ navigation, route }) {
   };
 
   const handleCardPlay = (cardIdx) => {
-    // Prevent multiple card plays
-    if (cardPlayedRef.current) {
-      return;
-    }
+    if (cardPlayedRef.current) return;
     
     const human = players.find((p) => p.isHuman && !p.eliminated);
     if (!human || gamePhase !== 'playing' || !isHumanTurn) return;
     
-    // Mark card as being played
     cardPlayedRef.current = true;
-
     const card = human.hand[cardIdx];
 
     if (card.isJolly()) {
@@ -359,7 +355,8 @@ export default function GameScreen({ navigation, route }) {
 
   const finalizeCardPlay = (player, cardIdx, card) => {
     player.hand.splice(cardIdx, 1);
-    setTableCards((prev) => [...prev, { player, card }]);
+    const newTableCards = [...tableCards, { player, card }];
+    setTableCards(newTableCards);
     setPlayers([...players]);
     setIsHumanTurn(false);
 
@@ -372,6 +369,13 @@ export default function GameScreen({ navigation, route }) {
   };
 
   const resolveTrick = (activeList, allPlayers, cards) => {
+    if (tableCards.length === 0) {
+      console.error('No table cards to resolve - skipping trick resolution');
+      setMessage('Errore: nessuna carta in tavola');
+      return;
+    }
+
+    // Find the winner by comparing effective scores
     let winnerEntry = tableCards[0];
     for (let i = 1; i < tableCards.length; i++) {
       if (tableCards[i].card.effectiveScore > winnerEntry.card.effectiveScore) {
@@ -379,23 +383,38 @@ export default function GameScreen({ navigation, route }) {
       }
     }
 
-    winnerEntry.player.taken++;
-    triggerSpeech(winnerEntry.player, 'WIN_TRICK');
+    // Find the player in the activeList that matches the winner using name-based matching
+    // This is more robust than reference comparison since player objects may be recreated
+    const winnerPlayer = activeList.find(p => p.name === winnerEntry.player.name);
     
-    setMessage(`Mano a ${winnerEntry.player.name}!`);
+    if (winnerPlayer) {
+      winnerPlayer.taken++;
+      triggerSpeech(winnerPlayer, 'WIN_TRICK');
+      setMessage(`🎯 Presa di ${winnerPlayer.name}!`);
+      
+      // Update the trick starter for next trick
+      const winnerIdx = activeList.indexOf(winnerPlayer);
+      if (winnerIdx >= 0) {
+        setTrickStarterIndex(winnerIdx);
+      } else {
+        // This should not happen since we just found the player, but handle it gracefully
+        console.warn(`Failed to update trick starter: winner ${winnerPlayer.name} index not found. Retaining previous trick starter.`);
+      }
+    } else {
+      console.error(`Winner ${winnerEntry.player.name} not found in ${activeList.length} active players`);
+      setMessage(`Mano completata`);
+    }
+    
     setPlayers([...allPlayers]);
-
-    // Update round starter to the trick winner for next trick
-    const winnerIdx = activeList.indexOf(winnerEntry.player);
-    setRoundStarterIndex(winnerIdx);
 
     setTimeout(() => {
       setTableCards([]);
       setTurnPlayersPlayed(0);
       cardPlayedRef.current = false;
 
-      if (activeList[0].hand.length > 0) {
-        // Start new trick from the winner
+      const hasCardsLeft = activeList.some(p => p.hand && p.hand.length > 0);
+      
+      if (hasCardsLeft) {
         playTurn(0, activeList, allPlayers, cards);
       } else {
         endRound(activeList, allPlayers);
@@ -425,11 +444,14 @@ export default function GameScreen({ navigation, route }) {
     if (deaths.length > 0) {
       setMessage(`💀 Eliminati: ${deaths.join(', ')}`);
     } else {
-      setMessage('Fine round');
+      setMessage('Fine round - Tutti salvi!');
     }
 
     setGamePhase('roundEnd');
-    setRoundStarterIndex((prev) => prev + 1);
+    
+    // Move dealer to next player
+    const newDealerIdx = (dealerIndex + 1) % allPlayers.length;
+    setDealerIndex(newDealerIdx);
 
     // Calculate next cards
     let nextCards = cardsToDeal;
@@ -453,7 +475,7 @@ export default function GameScreen({ navigation, route }) {
         endGame(stillActive[0] || null);
       } else {
         setCardsToDeal(nextCards);
-        startRound(allPlayers, nextCards, roundStarterIndex + 1);
+        startRound(allPlayers, nextCards, newDealerIdx);
       }
     }, 3000);
   };
@@ -492,13 +514,36 @@ export default function GameScreen({ navigation, route }) {
   const bots = players.filter((p) => !p.isHuman);
   const isIndiana = cardsToDeal === 1;
   const activePlayers = players.filter((p) => !p.eliminated);
-  const dealerPlayer = activePlayers.length > 0 
-    ? activePlayers[roundStarterIndex % activePlayers.length] 
-    : null;
+  
+  // Get bid status colors
+  const getBidStatusColor = () => {
+    if (!human || human.bid < 0) return COLORS.textSecondary;
+    if (human.taken === human.bid) return '#00FF88';
+    if (human.taken > human.bid) return '#FF4757';
+    return COLORS.denari;
+  };
+
+  // Render energy bar for lives
+  const renderEnergyBar = (lives, maxLives, small = false) => {
+    const segments = [];
+    for (let i = 0; i < maxLives; i++) {
+      const isActive = i < lives;
+      segments.push(
+        <View 
+          key={i}
+          style={[
+            small ? styles.energySegmentSmall : styles.energySegment,
+            isActive ? styles.energyActive : styles.energyInactive,
+          ]}
+        />
+      );
+    }
+    return <View style={styles.energyBar}>{segments}</View>;
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* === HEADER === */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.exitButton}
@@ -516,129 +561,181 @@ export default function GameScreen({ navigation, route }) {
           <Text style={styles.leagueText}>{league.name}</Text>
         </View>
         
-        <View style={styles.roundBadge}>
+        <View 
+          style={styles.roundBadge}
+          accessibilityLabel={isIndiana ? 'Modalità Indiana, 1 carta' : `${cardsToDeal} carte`}
+          accessibilityRole="text"
+        >
           <Text style={styles.roundText}>
-            {cardsToDeal === 1 ? '🎯 INDIANA' : `${cardsToDeal} CARTE`}
+            {isIndiana ? '🎯 1' : `${cardsToDeal}📄`}
           </Text>
         </View>
       </View>
 
-      {/* Message */}
-      <View style={styles.messageContainer}>
-        <Text style={styles.messageText}>{message}</Text>
+      {/* === MESSAGE HUD === */}
+      <View style={[styles.messageHUD, isSuddenDeath && styles.messageHUDDanger]}>
+        <Text style={[styles.messageText, isSuddenDeath && styles.messageTextDanger]}>
+          {message}
+        </Text>
       </View>
 
-      {/* Bot Players - Positioned around the table */}
-      <View style={styles.botsContainer}>
-        {bots.map((bot, index) => {
-          // Position bots around the top/sides based on count
-          const totalBots = bots.length;
-          let positionStyle = {};
-          
-          if (totalBots === 1) {
-            positionStyle = { alignSelf: 'center' };
-          } else if (totalBots === 2) {
-            positionStyle = index === 0 
-              ? { alignSelf: 'flex-start', marginLeft: 20 } 
-              : { alignSelf: 'flex-end', marginRight: 20 };
-          } else {
-            // Spread across for 3+ bots
-            const isLeft = index < totalBots / 2;
-            const isCenter = totalBots % 2 === 1 && index === Math.floor(totalBots / 2);
-            if (isCenter) {
-              positionStyle = { alignSelf: 'center' };
-            } else if (isLeft) {
-              positionStyle = { alignSelf: 'flex-start', marginLeft: 10 + (index * 5) };
-            } else {
-              positionStyle = { alignSelf: 'flex-end', marginRight: 10 + ((totalBots - 1 - index) * 5) };
-            }
-          }
-          
-          return (
+      {/* === AREA AVVERSARI (TOP) === */}
+      <View style={styles.opponentsArea}>
+        <View style={styles.opponentsRow}>
+          {bots.map((bot, index) => (
             <View 
               key={bot.name} 
               style={[
-                styles.botWrapper,
-                positionStyle,
-                { transform: [{ scale: 0.9 }] }
+                styles.opponentCard,
+                activePlayer === bot && styles.opponentCardActive,
+                bot.eliminated && styles.opponentCardEliminated,
               ]}
             >
-              <PlayerBox
-                player={bot}
-                isActive={activePlayer === bot}
-                isDealer={dealerPlayer === bot}
-                showCards={isIndiana}
-                cardsToDeal={cardsToDeal}
-              />
+              {/* Dealer badge */}
+              {players.indexOf(bot) === dealerIndex % players.length && (
+                <View style={styles.dealerBadge}>
+                  <Text style={styles.dealerBadgeText}>D</Text>
+                </View>
+              )}
+              
+              {/* Avatar */}
+              <View style={[
+                styles.avatarContainer,
+                activePlayer === bot && styles.avatarActive,
+              ]}>
+                <Text style={styles.avatarEmoji}>{bot.emoji || '🎴'}</Text>
+              </View>
+              
+              {/* Name */}
+              <Text style={styles.opponentName} numberOfLines={1}>{bot.name}</Text>
+              
+              {/* Energy bar */}
+              {renderEnergyBar(bot.lives, gameSettings.lives, true)}
+              
+              {/* Bid / Taken */}
+              <View style={styles.opponentStats}>
+                <Text style={styles.opponentBid}>
+                  {bot.bid >= 0 ? `${bot.taken}/${bot.bid}` : '-'}
+                </Text>
+              </View>
+              
+              {/* Cards indicator */}
+              {!bot.eliminated && bot.hand && bot.hand.length > 0 && (
+                <View style={styles.cardsIndicator}>
+                  {isIndiana && bot.hand[0] ? (
+                    <View style={styles.miniCardVisible}>
+                      <Image 
+                        source={getCardImage(bot.hand[0].getImageName())}
+                        style={styles.miniCardImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  ) : (
+                    <View style={styles.cardsStack}>
+                      {bot.hand.map((_, i) => (
+                        <View key={i} style={[styles.miniCardBack, { marginLeft: i * 4 }]} />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+              
+              {/* Speech bubble */}
               {speechBubble.player === bot.name && (
                 <View style={styles.speechBubble}>
                   <Text style={styles.speechText}>{speechBubble.text}</Text>
                 </View>
               )}
             </View>
-          );
-        })}
-      </View>
-
-      {/* Table Cards */}
-      <View style={styles.tableContainer}>
-        <View style={styles.tableCards}>
-          {tableCards.map((tc, i) => (
-            <View key={i} style={styles.tableCardWrapper}>
-              <Text style={styles.tableCardLabel}>{tc.player.name}</Text>
-              <CardComponent card={tc.card} style={styles.tableCard} />
-            </View>
           ))}
         </View>
       </View>
 
-      {/* Player Area */}
-      <View style={styles.playerArea}>
-        {/* Player Stats */}
-        {human && (
-          <View style={styles.playerStats}>
-            <Text style={styles.playerName}>{human.name}</Text>
-            <View style={styles.heartsRow}>
-              {Array.from({ length: gameSettings.lives }).map((_, i) => (
-                <Text key={i} style={[styles.heart, i >= human.lives && styles.deadHeart]}>
-                  ❤️
-                </Text>
-              ))}
+      {/* === ARENA DI GIOCO (CENTER) === */}
+      <View style={styles.arenaArea}>
+        <View style={styles.tableCards}>
+          {tableCards.map((tc, i) => (
+            <View key={i} style={styles.tableCardWrapper}>
+              <Text style={styles.tableCardLabel}>{tc.player.name}</Text>
+              <View style={styles.tableCardShadow}>
+                <CardComponent card={tc.card} style={styles.tableCard} />
+              </View>
             </View>
-            <View style={styles.bidInfo}>
-              <Text style={styles.bidText}>BID: {human.bid >= 0 ? human.bid : '?'}</Text>
-              <Text style={[
-                styles.takenText,
-                human.bid >= 0 && human.taken === human.bid && styles.takenOk,
-                human.bid >= 0 && human.taken > human.bid && styles.takenDanger,
-              ]}>
-                PRESE: {human.taken}
+          ))}
+        </View>
+        
+        {tableCards.length === 0 && gamePhase === 'playing' && (
+          <Text style={styles.arenaHint}>Area di gioco</Text>
+        )}
+      </View>
+
+      {/* === PLANCIA UTENTE (BOTTOM) === */}
+      <View style={styles.playerArea}>
+        {/* Dashboard Glass Bar */}
+        <View style={styles.dashboardBar}>
+          {/* Left: Lives */}
+          <View style={styles.dashboardSection}>
+            <Text style={styles.dashboardLabel}>VITE</Text>
+            {human && renderEnergyBar(human.lives, gameSettings.lives)}
+          </View>
+          
+          {/* Center: Player info */}
+          <View style={styles.dashboardCenter}>
+            {human && players.indexOf(human) === dealerIndex % players.length && (
+              <View style={styles.dealerIndicator}>
+                <Text style={styles.dealerIndicatorText}>MAZZIERE</Text>
+              </View>
+            )}
+            <Text style={styles.playerNameDashboard}>{human?.name || 'Giocatore'}</Text>
+          </View>
+          
+          {/* Right: Taken / Bid */}
+          <View style={styles.dashboardSection}>
+            <Text style={styles.dashboardLabel}>PRESE / OBIETTIVO</Text>
+            <View style={styles.bidDisplay}>
+              <Text style={[styles.bidNumber, { color: getBidStatusColor() }]}>
+                {human?.taken ?? 0}
+              </Text>
+              <Text style={styles.bidSeparator}>/</Text>
+              <Text style={styles.bidNumber}>
+                {human?.bid >= 0 ? human.bid : '?'}
               </Text>
             </View>
           </View>
-        )}
+        </View>
 
-        {/* Bid Buttons */}
-        {gamePhase === 'bidding' && activePlayer?.isHuman && (
-          <View style={styles.bidButtons}>
-            {Array.from({ length: cardsToDeal + 1 }).map((_, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.bidButton,
-                  i === forbiddenBid && styles.bidButtonDisabled,
-                ]}
-                onPress={() => handlePlayerBid(i)}
-                disabled={i === forbiddenBid}
-              >
-                <Text style={styles.bidButtonText}>{i}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Bidding Buttons */}
+        {gamePhase === 'bidding' && activePlayer?.isHuman && isHumanTurn && (
+          <View style={styles.biddingContainer}>
+            <Text style={styles.biddingTitle}>Quante prese farai?</Text>
+            <View style={styles.bidButtons}>
+              {Array.from({ length: cardsToDeal + 1 }).map((_, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[
+                    styles.bidButton,
+                    i === forbiddenBid && styles.bidButtonForbidden,
+                  ]}
+                  onPress={() => handlePlayerBid(i)}
+                  disabled={i === forbiddenBid}
+                >
+                  <Text style={[
+                    styles.bidButtonText,
+                    i === forbiddenBid && styles.bidButtonTextForbidden,
+                  ]}>
+                    {i}
+                  </Text>
+                  {i === forbiddenBid && (
+                    <View style={styles.forbiddenLine} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
-        {/* Player Hand - Fan Layout */}
-        {human && !human.eliminated && (
+        {/* Player Hand */}
+        {human && !human.eliminated && gamePhase !== 'gameOver' && (
           <View style={styles.handContainer}>
             <View style={styles.fanContainer}>
               {human.hand.map((card, i) => {
@@ -675,22 +772,44 @@ export default function GameScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Next Round / End Game Buttons */}
+        {/* Game Over Buttons */}
         {gamePhase === 'gameOver' && (
-          <View style={styles.endButtons}>
+          <View style={styles.gameOverContainer}>
+            <View style={[
+              styles.gameOverBanner,
+              winner?.isHuman ? styles.victoryBanner : styles.defeatBanner,
+            ]}>
+              <Text style={styles.gameOverEmoji}>
+                {winner?.isHuman ? '🏆' : '💀'}
+              </Text>
+              <Text style={styles.gameOverTitle}>
+                {winner?.isHuman ? 'VITTORIA!' : 'SCONFITTA'}
+              </Text>
+              {winner?.isHuman && (
+                <Text style={styles.gameOverReward}>+{league.reward} 🪙</Text>
+              )}
+            </View>
+            
             <TouchableOpacity
               style={styles.endButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.endButtonText}>
-                {winner?.isHuman ? '🏆 RACCOGLI PREMIO' : 'TORNA AL MENU'}
-              </Text>
+              <LinearGradient
+                colors={winner?.isHuman ? ['#FFD700', '#FFA500'] : ['#666', '#444']}
+                style={styles.endButtonGradient}
+              >
+                <Text style={styles.endButtonText}>
+                  {winner?.isHuman ? 'RACCOGLI PREMIO' : 'TORNA AL MENU'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* Jolly Modal */}
+      {/* === MODALS === */}
+      
+      {/* Jolly Choice Modal */}
       <Modal visible={showJollyModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -701,20 +820,20 @@ export default function GameScreen({ navigation, route }) {
               style={[styles.jollyButton, styles.jollyMax]}
               onPress={() => handleJollyChoice(true)}
             >
-              <Text style={styles.jollyButtonText}>MAX (Vinci Tutto)</Text>
+              <Text style={styles.jollyButtonText}>⬆️ MAX (Vinci Tutto)</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
               style={[styles.jollyButton, styles.jollyMin]}
               onPress={() => handleJollyChoice(false)}
             >
-              <Text style={styles.jollyButtonText}>MIN (Perdi Apposta)</Text>
+              <Text style={styles.jollyButtonText}>⬇️ MIN (Perdi Apposta)</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Dealer Selection Animation Modal */}
+      {/* Dealer Selection Modal */}
       <Modal visible={showDealerAnimation} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.dealerModalContent}>
@@ -726,7 +845,7 @@ export default function GameScreen({ navigation, route }) {
                   transform: [
                     { scale: dealerAnimValue.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [1, 1.2],
+                      outputRange: [1, 1.15],
                     })},
                   ],
                 },
@@ -735,6 +854,7 @@ export default function GameScreen({ navigation, route }) {
                 <Text style={styles.dealerAnimName}>{dealerAnimationPlayer.name}</Text>
               </Animated.View>
             )}
+            <Text style={styles.dealerModalHint}>Chi distribuirà le carte?</Text>
           </View>
         </View>
       </Modal>
@@ -747,197 +867,389 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
+  
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 50,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   exitButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   exitText: {
     color: '#888',
-    fontSize: 20,
+    fontSize: 18,
   },
   leagueBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   leagueText: {
     color: '#000',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   roundBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   roundText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
-  messageContainer: {
-    alignItems: 'center',
-    paddingVertical: 15,
-    marginHorizontal: 20,
+  
+  // Message HUD
+  messageHUD: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
     borderRadius: 12,
-    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    alignItems: 'center',
+  },
+  messageHUDDanger: {
+    backgroundColor: 'rgba(255, 71, 87, 0.15)',
+    borderColor: 'rgba(255, 71, 87, 0.4)',
   },
   messageText: {
-    color: '#FFD700',
-    fontSize: 18,
+    color: COLORS.denari,
+    fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  botsContainer: {
+  messageTextDanger: {
+    color: '#FF6B6B',
+  },
+  
+  // Opponents Area
+  opponentsArea: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  opponentsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    maxHeight: 200,
+    gap: 8,
   },
-  botWrapper: {
-    marginHorizontal: 4,
-    marginVertical: 4,
+  opponentCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 10,
+    alignItems: 'center',
+    minWidth: 64,
+    maxWidth: 72,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     position: 'relative',
+  },
+  opponentCardActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderColor: COLORS.denari,
+    shadowColor: COLORS.denari,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  opponentCardEliminated: {
+    opacity: 0.3,
+  },
+  dealerBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    backgroundColor: COLORS.denari,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  dealerBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  avatarActive: {
+    borderWidth: 2,
+    borderColor: COLORS.denari,
+  },
+  avatarEmoji: {
+    fontSize: 22,
+  },
+  opponentName: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  opponentStats: {
+    marginTop: 2,
+  },
+  opponentBid: {
+    color: COLORS.denari,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  cardsIndicator: {
+    marginTop: 4,
+  },
+  cardsStack: {
+    flexDirection: 'row',
+  },
+  miniCardBack: {
+    width: 16,
+    height: 24,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: COLORS.denari,
+  },
+  miniCardVisible: {
+    width: 24,
+    height: 36,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  miniCardImage: {
+    width: '100%',
+    height: '100%',
   },
   speechBubble: {
     position: 'absolute',
-    top: -40,
+    top: -32,
     left: '50%',
-    transform: [{ translateX: -50 }],
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#000',
-    maxWidth: 150,
+    transform: [{ translateX: -40 }],
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    maxWidth: 100,
+    zIndex: 100,
   },
   speechText: {
     color: '#000',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 9,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  tableContainer: {
+  
+  // Energy Bar
+  energyBar: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  energySegment: {
+    width: 16,
+    height: 6,
+    borderRadius: 3,
+  },
+  energySegmentSmall: {
+    width: 10,
+    height: 4,
+    borderRadius: 2,
+  },
+  energyActive: {
+    backgroundColor: '#00FF88',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  energyInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  
+  // Arena Area
+  arenaArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   tableCards: {
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
+    gap: 12,
   },
   tableCardWrapper: {
     alignItems: 'center',
-    marginHorizontal: 10,
-    marginVertical: 5,
   },
   tableCardLabel: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 5,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 8,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 10,
+    marginBottom: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
+  tableCardShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
   tableCard: {
-    width: 60,
-    height: 90,
+    width: 65,
+    height: 97,
   },
+  arenaHint: {
+    color: 'rgba(255, 255, 255, 0.2)',
+    fontSize: 14,
+  },
+  
+  // Player Area (Bottom)
   playerArea: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingTop: 15,
     paddingBottom: 30,
+    paddingTop: 10,
   },
-  playerStats: {
+  dashboardBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    gap: 15,
+    marginHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 10,
   },
-  playerName: {
-    color: '#fff',
-    fontSize: 16,
+  dashboardSection: {
+    alignItems: 'center',
+  },
+  dashboardCenter: {
+    alignItems: 'center',
+  },
+  dashboardLabel: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 9,
+    fontWeight: '600',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  dealerIndicator: {
+    backgroundColor: COLORS.denari,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  dealerIndicatorText: {
+    color: '#000',
+    fontSize: 9,
     fontWeight: 'bold',
   },
-  heartsRow: {
-    flexDirection: 'row',
-  },
-  heart: {
-    fontSize: 16,
-  },
-  deadHeart: {
-    opacity: 0.2,
-  },
-  bidInfo: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  bidText: {
-    color: '#FFD700',
+  playerNameDashboard: {
+    color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
   },
-  takenText: {
-    color: '#fff',
-    fontSize: 14,
+  bidDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  bidNumber: {
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#fff',
   },
-  takenOk: {
-    color: '#0f0',
+  bidSeparator: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 4,
   },
-  takenDanger: {
-    color: '#f00',
+  
+  // Bidding
+  biddingContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 10,
+  },
+  biddingTitle: {
+    color: COLORS.denari,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   bidButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: 10,
     gap: 10,
   },
   bidButton: {
     width: 50,
     height: 50,
-    backgroundColor: '#2c3e50',
-    borderRadius: 8,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#4ca1af',
+    borderWidth: 2,
+    borderColor: COLORS.denari,
   },
-  bidButtonDisabled: {
-    opacity: 0.3,
-    borderColor: '#f00',
+  bidButtonForbidden: {
+    borderColor: 'rgba(255, 71, 87, 0.5)',
+    backgroundColor: 'rgba(255, 71, 87, 0.1)',
   },
   bidButtonText: {
-    color: '#4ca1af',
+    color: COLORS.denari,
     fontSize: 20,
     fontWeight: 'bold',
   },
+  bidButtonTextForbidden: {
+    color: 'rgba(255, 71, 87, 0.5)',
+  },
+  forbiddenLine: {
+    position: 'absolute',
+    // Uses 60px (slightly larger than button width of 50px) to create diagonal cross effect
+    width: 60,
+    height: 2,
+    backgroundColor: 'rgba(255, 71, 87, 0.6)',
+    transform: [{ rotate: '-45deg' }],
+  },
+  
+  // Hand
   handContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 10,
     paddingBottom: 20,
   },
@@ -946,62 +1258,106 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  fanCardWrapper: {
-    // Transform is applied dynamically in component
-  },
-  endButtons: {
+  fanCardWrapper: {},
+  
+  // Game Over
+  gameOverContainer: {
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  gameOverBanner: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  victoryBanner: {
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 2,
+    borderColor: COLORS.denari,
+  },
+  defeatBanner: {
+    backgroundColor: 'rgba(255, 71, 87, 0.2)',
+    borderWidth: 2,
+    borderColor: '#FF4757',
+  },
+  gameOverEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  gameOverTitle: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 4,
+  },
+  gameOverReward: {
+    color: COLORS.denari,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 8,
   },
   endButton: {
-    backgroundColor: '#8b0000',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 8,
+    borderRadius: 16,
+    overflow: 'hidden',
+    width: '80%',
+  },
+  endButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   endButtonText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#000',
+    fontSize: 16,
     fontWeight: 'bold',
+    letterSpacing: 1,
   },
+  
+  // Modals
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#111',
+    backgroundColor: 'rgba(20, 20, 30, 0.95)',
     padding: 30,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
     alignItems: 'center',
-    width: '80%',
-    maxWidth: 300,
+    width: '85%',
+    maxWidth: 320,
   },
   modalTitle: {
-    color: '#FFD700',
-    fontSize: 28,
+    color: COLORS.denari,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   modalSubtitle: {
-    color: '#888',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 14,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   jollyButton: {
     width: '100%',
-    padding: 15,
-    borderRadius: 8,
-    marginVertical: 5,
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 6,
   },
   jollyMax: {
-    backgroundColor: '#e67e22',
+    backgroundColor: 'rgba(0, 255, 136, 0.2)',
+    borderWidth: 1,
+    borderColor: '#00FF88',
   },
   jollyMin: {
-    backgroundColor: '#3498db',
+    backgroundColor: 'rgba(0, 212, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: '#00D4FF',
   },
   jollyButtonText: {
     color: '#fff',
@@ -1010,42 +1366,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   dealerModalContent: {
-    backgroundColor: '#111',
+    backgroundColor: 'rgba(20, 20, 30, 0.95)',
     padding: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#4ca1af',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
     alignItems: 'center',
-    width: '80%',
-    maxWidth: 320,
+    width: '85%',
+    maxWidth: 340,
   },
   dealerModalTitle: {
-    color: '#4ca1af',
-    fontSize: 22,
+    color: COLORS.denari,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center',
+    letterSpacing: 2,
   },
   dealerAnimCard: {
-    backgroundColor: '#1a1a2e',
-    padding: 25,
-    borderRadius: 15,
-    borderWidth: 3,
-    borderColor: '#FFD700',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    padding: 30,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: COLORS.denari,
     alignItems: 'center',
-    shadowColor: '#FFD700',
+    shadowColor: COLORS.denari,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 10,
   },
   dealerAnimEmoji: {
-    fontSize: 50,
-    marginBottom: 10,
+    fontSize: 56,
+    marginBottom: 12,
   },
   dealerAnimName: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
+  },
+  dealerModalHint: {
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontSize: 12,
+    marginTop: 20,
   },
 });
