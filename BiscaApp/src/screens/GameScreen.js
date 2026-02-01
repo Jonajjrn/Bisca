@@ -189,7 +189,9 @@ export default function GameScreen({ navigation, route }) {
     cardPlayedRef.current = false;
 
     // Bidding starts from dealer
-    const starterIndex = active.findIndex(p => p === currentPlayers[dealerIdx % currentPlayers.length]) || 0;
+    const dealerPlayer = currentPlayers[dealerIdx % currentPlayers.length];
+    const starterIdx = active.findIndex(p => p === dealerPlayer);
+    const starterIndex = starterIdx >= 0 ? starterIdx : 0;
     
     setTimeout(() => {
       doBidding(0, active, starterIndex, currentPlayers, actualCards, 0);
@@ -269,7 +271,9 @@ export default function GameScreen({ navigation, route }) {
     setIsHumanTurn(false);
 
     const humanIdx = active.indexOf(human);
-    const dealerActiveIdx = active.findIndex(p => p === players[dealerIndex % players.length]) || 0;
+    const dealerPlayer = players[dealerIndex % players.length];
+    const dealerIdx = active.findIndex(p => p === dealerPlayer);
+    const dealerActiveIdx = dealerIdx >= 0 ? dealerIdx : 0;
     const bidIdx = (humanIdx - dealerActiveIdx + active.length) % active.length;
 
     setTimeout(() => {
@@ -380,8 +384,9 @@ export default function GameScreen({ navigation, route }) {
       }
     }
 
-    // Find the player in the activeList that matches the winner
-    const winnerPlayer = activeList.find(p => p.name === winnerEntry.player.name);
+    // Find the player in the activeList that matches the winner by reference
+    // tableCards stores the actual player objects, so we can use reference comparison
+    const winnerPlayer = activeList.find(p => p === winnerEntry.player);
     
     if (winnerPlayer) {
       winnerPlayer.taken++;
@@ -390,10 +395,20 @@ export default function GameScreen({ navigation, route }) {
       
       // Update the trick starter for next trick
       const winnerIdx = activeList.indexOf(winnerPlayer);
-      setTrickStarterIndex(winnerIdx);
+      setTrickStarterIndex(winnerIdx >= 0 ? winnerIdx : 0);
     } else {
-      console.error('Winner player not found in active list');
-      setMessage(`Mano completata`);
+      // Fallback: if reference comparison fails, use name matching
+      const winnerByName = activeList.find(p => p.name === winnerEntry.player.name);
+      if (winnerByName) {
+        winnerByName.taken++;
+        triggerSpeech(winnerByName, 'WIN_TRICK');
+        setMessage(`🎯 Presa di ${winnerByName.name}!`);
+        const winnerIdx = activeList.indexOf(winnerByName);
+        setTrickStarterIndex(winnerIdx >= 0 ? winnerIdx : 0);
+      } else {
+        console.error('Winner player not found in active list');
+        setMessage(`Mano completata`);
+      }
     }
     
     setPlayers([...allPlayers]);
