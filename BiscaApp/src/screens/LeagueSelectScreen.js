@@ -7,10 +7,9 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
 import { LeagueCard } from '../components/LeagueCard';
-import { LEAGUES } from '../utils/constants';
+import { LEAGUES, COLORS } from '../utils/constants';
 
 export default function LeagueSelectScreen({ navigation }) {
   const { playerData, setCurrentLeague, deductCoins, gameSettings } = useGame();
@@ -27,10 +26,7 @@ export default function LeagueSelectScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#0f0f23']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -70,7 +66,7 @@ export default function LeagueSelectScreen({ navigation }) {
           💡 Leghe più alte = Premi maggiori!
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -78,6 +74,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 50,
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: 'row',
@@ -90,32 +87,32 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   backButtonText: {
-    color: '#888',
+    color: COLORS.textSecondary,
     fontSize: 16,
   },
   coinsDisplay: {
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
+    backgroundColor: COLORS.glass,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#FFD700',
+    borderColor: COLORS.denari,
   },
   coinsText: {
-    color: '#FFD700',
+    color: COLORS.denari,
     fontSize: 18,
     fontWeight: 'bold',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.textPrimary,
     textAlign: 'center',
     letterSpacing: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: '#888',
+    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 5,
     marginBottom: 20,
@@ -129,10 +126,12 @@ const styles = StyleSheet.create({
   infoContainer: {
     padding: 20,
     alignItems: 'center',
+    backgroundColor: COLORS.backgroundSecondary,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glassBorder,
   },
   infoText: {
-    color: '#666',
+    color: COLORS.textMuted,
     fontSize: 14,
-    fontStyle: 'italic',
   },
 });

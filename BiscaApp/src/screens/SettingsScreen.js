@@ -6,13 +6,17 @@ import {
   StyleSheet,
   TextInput,
   Alert,
+  ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
+import { COLORS, AVATAR_OPTIONS } from '../utils/constants';
 
 export default function SettingsScreen({ navigation }) {
   const { playerData, updatePlayerData, gameSettings, setGameSettings } = useGame();
   const [name, setName] = useState(playerData.name);
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    AVATAR_OPTIONS.find(a => a.emoji === playerData.avatar) || AVATAR_OPTIONS[0]
+  );
 
   const handleSave = async () => {
     if (name.trim().length < 2) {
@@ -20,7 +24,10 @@ export default function SettingsScreen({ navigation }) {
       return;
     }
     
-    await updatePlayerData({ name: name.trim().toUpperCase() });
+    await updatePlayerData({ 
+      name: name.trim().toUpperCase(),
+      avatar: selectedAvatar.emoji,
+    });
     Alert.alert('Salvato!', 'Le impostazioni sono state aggiornate.');
   };
 
@@ -52,10 +59,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#0f0f23']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -184,7 +188,7 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.statsText}>Vittorie: {playerData.gamesWon}</Text>
         <Text style={styles.statsText}>Monete: {playerData.coins}</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -192,6 +196,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 50,
+    backgroundColor: COLORS.background,
   },
   header: {
     paddingHorizontal: 20,
@@ -201,13 +206,13 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   backButtonText: {
-    color: '#888',
+    color: COLORS.textSecondary,
     fontSize: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: 30,
     letterSpacing: 2,
@@ -217,25 +222,25 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   sectionTitle: {
-    color: '#FFD700',
+    color: COLORS.denari,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   input: {
-    backgroundColor: 'rgba(50,50,50,0.8)',
+    backgroundColor: COLORS.glass,
     borderWidth: 1,
-    borderColor: '#555',
-    borderRadius: 8,
-    padding: 15,
-    color: '#fff',
+    borderColor: COLORS.glassBorder,
+    borderRadius: 12,
+    padding: 16,
+    color: COLORS.textPrimary,
     fontSize: 16,
   },
   settingRow: {
     marginBottom: 20,
   },
   settingLabel: {
-    color: '#ccc',
+    color: COLORS.textSecondary,
     fontSize: 14,
     marginBottom: 10,
   },
@@ -245,23 +250,23 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   optionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: 'rgba(50,50,50,0.8)',
-    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.glass,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#555',
+    borderColor: COLORS.glassBorder,
   },
   optionButtonWide: {
     flex: 1,
     alignItems: 'center',
   },
   optionButtonActive: {
-    backgroundColor: '#4ca1af',
-    borderColor: '#4ca1af',
+    backgroundColor: COLORS.denari,
+    borderColor: COLORS.denari,
   },
   optionButtonText: {
-    color: '#888',
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
   optionButtonTextActive: {
@@ -270,9 +275,9 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginHorizontal: 20,
-    backgroundColor: '#4ca1af',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: COLORS.denari,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     marginBottom: 30,
   },
@@ -286,44 +291,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resetButton: {
-    backgroundColor: 'rgba(255,0,0,0.2)',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 71, 87, 0.15)',
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ff3b3b',
+    borderColor: COLORS.danger,
     width: '100%',
     alignItems: 'center',
   },
   resetButtonText: {
-    color: '#ff3b3b',
+    color: COLORS.danger,
     fontSize: 14,
     fontWeight: 'bold',
   },
   dangerText: {
-    color: '#666',
+    color: COLORS.textMuted,
     fontSize: 12,
     marginTop: 8,
-    fontStyle: 'italic',
   },
   statsSection: {
     position: 'absolute',
     bottom: 30,
     left: 20,
     right: 20,
-    padding: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 8,
+    padding: 16,
+    backgroundColor: COLORS.glass,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.glassBorder,
   },
   statsTitle: {
-    color: '#888',
+    color: COLORS.textSecondary,
     fontSize: 14,
     marginBottom: 10,
   },
   statsText: {
-    color: '#666',
+    color: COLORS.textMuted,
     fontSize: 12,
-    marginBottom: 3,
+    marginBottom: 4,
   },
 });

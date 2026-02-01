@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Modal,
   Alert,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
@@ -37,7 +38,7 @@ export default function GameScreen({ navigation, route }) {
   const [delta, setDelta] = useState(-1);
   const [roundStarterIndex, setRoundStarterIndex] = useState(0);
   const [currentBidsSum, setCurrentBidsSum] = useState(0);
-  const [gamePhase, setGamePhase] = useState('init'); // init, bidding, playing, roundEnd, gameOver
+  const [gamePhase, setGamePhase] = useState('init'); // init, dealerSelect, bidding, playing, roundEnd, gameOver
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [activePlayer, setActivePlayer] = useState(null);
   const [message, setMessage] = useState('');
@@ -46,6 +47,14 @@ export default function GameScreen({ navigation, route }) {
   const [winner, setWinner] = useState(null);
   const [forbiddenBid, setForbiddenBid] = useState(-1);
   const [speechBubble, setSpeechBubble] = useState({ player: null, text: '' });
+  const [isHumanTurn, setIsHumanTurn] = useState(false);
+  const [showDealerAnimation, setShowDealerAnimation] = useState(false);
+  const [dealerAnimationPlayer, setDealerAnimationPlayer] = useState(null);
+  const [turnPlayersPlayed, setTurnPlayersPlayed] = useState(0);
+  
+  // Animation refs
+  const dealerAnimValue = useRef(new Animated.Value(0)).current;
+  const cardPlayedRef = useRef(false); // Prevent double card plays
 
   // Initialize game
   useEffect(() => {
@@ -61,13 +70,59 @@ export default function GameScreen({ navigation, route }) {
     setPlayers(newPlayers);
     setCardsToDeal(gameSettings.maxCards);
     setDelta(-1);
-    setRoundStarterIndex(0);
     setTableCards([]);
-    setMessage('Preparazione partita...');
+    setMessage('Selezione mazziere...');
+    setGamePhase('dealerSelect');
     
+    // Random dealer selection animation
     setTimeout(() => {
-      startRound(newPlayers, gameSettings.maxCards, 0);
-    }, 1500);
+      selectRandomDealer(newPlayers);
+    }, 500);
+  };
+
+  const selectRandomDealer = (playerList) => {
+    const randomIndex = Math.floor(Math.random() * playerList.length);
+    let animationCount = 0;
+    const totalAnimations = playerList.length * 2 + randomIndex; // Spin around twice then land on random
+    
+    setShowDealerAnimation(true);
+    
+    const animateDealer = () => {
+      const currentIdx = animationCount % playerList.length;
+      setDealerAnimationPlayer(playerList[currentIdx]);
+      
+      // Animate pulse
+      Animated.sequence([
+        Animated.timing(dealerAnimValue, {
+          toValue: 1,
+          duration: 100 + (animationCount * 10), // Slow down over time
+          useNativeDriver: true,
+        }),
+        Animated.timing(dealerAnimValue, {
+          toValue: 0,
+          duration: 100 + (animationCount * 10),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      
+      animationCount++;
+      
+      if (animationCount < totalAnimations) {
+        setTimeout(animateDealer, 150 + (animationCount * 20)); // Slow down
+      } else {
+        // Final dealer selected
+        setRoundStarterIndex(randomIndex);
+        setShowDealerAnimation(false);
+        setDealerAnimationPlayer(null);
+        setMessage(`${playerList[randomIndex].name} è il mazziere!`);
+        
+        setTimeout(() => {
+          startRound(playerList, gameSettings.maxCards, randomIndex);
+        }, 1500);
+      }
+    };
+    
+    animateDealer();
   };
 
   const startRound = (currentPlayers, cards, starterIdx) => {
@@ -106,7 +161,10 @@ export default function GameScreen({ navigation, route }) {
     setPlayers([...currentPlayers]);
     setCurrentBidsSum(0);
     setTableCards([]);
+    setTurnPlayersPlayed(0);
     setGamePhase('bidding');
+    setIsHumanTurn(false);
+    cardPlayedRef.current = false;
 
     // Start bidding
     const starterIndex = starterIdx % active.length;
@@ -121,7 +179,12 @@ export default function GameScreen({ navigation, route }) {
       setMessage('Fase di gioco');
       setForbiddenBid(-1);
       setTableCards([]);
+      setTurnPlayersPlayed(0);
       setGamePhase('playing');
+      cardPlayedRef.current = false;
+      
+      // The dealer (starterIdx) leads the first trick
+      setRoundStarterIndex(starterIdx);
       
       setTimeout(() => {
         playTurn(0, activeList, allPlayers, cards);
@@ -190,25 +253,38 @@ export default function GameScreen({ navigation, route }) {
     }, 500);
   };
 
-  const playTurn = (idx, activeList, allPlayers, cards) => {
-    if (tableCards.length === activeList.length) {
-      // Resolve trick
+  const playTurn = (playersAlreadyPlayed, activeList, allPlayers, cards) => {
+    // Check if all players have played this trick
+    if (playersAlreadyPlayed >= activeList.length) {
+      // All players have played, resolve trick
+      setIsHumanTurn(false);
+      cardPlayedRef.current = false;
       setTimeout(() => {
         resolveTrick(activeList, allPlayers, cards);
       }, 1000);
       return;
     }
 
-    const p = activeList[idx % activeList.length];
+    // Get current player based on round starter and how many have played
+    const currentIdx = (roundStarterIndex + playersAlreadyPlayed) % activeList.length;
+    const p = activeList[currentIdx];
     setActivePlayer(p);
-    setCurrentPlayerIndex(idx);
+    setCurrentPlayerIndex(playersAlreadyPlayed);
+    setTurnPlayersPlayed(playersAlreadyPlayed);
 
     if (p.isHuman) {
+      setIsHumanTurn(true);
+      cardPlayedRef.current = false;
       setMessage('Tocca a te - Scegli una carta');
     } else {
+      setIsHumanTurn(false);
       // Bot plays
       setTimeout(() => {
         const chosenIdx = calculateBotMove(p, tableCards);
+        if (chosenIdx < 0 || chosenIdx >= p.hand.length) {
+          console.error('Invalid bot move index:', chosenIdx);
+          return;
+        }
         const card = p.hand[chosenIdx];
         
         if (card.isJolly()) {
@@ -222,15 +298,23 @@ export default function GameScreen({ navigation, route }) {
         setPlayers([...allPlayers]);
 
         setTimeout(() => {
-          playTurn(idx + 1, activeList, allPlayers, cards);
+          playTurn(playersAlreadyPlayed + 1, activeList, allPlayers, cards);
         }, 600);
       }, 800);
     }
   };
 
   const handleCardPlay = (cardIdx) => {
+    // Prevent multiple card plays
+    if (cardPlayedRef.current) {
+      return;
+    }
+    
     const human = players.find((p) => p.isHuman && !p.eliminated);
-    if (!human || gamePhase !== 'playing') return;
+    if (!human || gamePhase !== 'playing' || !isHumanTurn) return;
+    
+    // Mark card as being played
+    cardPlayedRef.current = true;
 
     const card = human.hand[cardIdx];
 
@@ -257,12 +341,13 @@ export default function GameScreen({ navigation, route }) {
     player.hand.splice(cardIdx, 1);
     setTableCards((prev) => [...prev, { player, card }]);
     setPlayers([...players]);
+    setIsHumanTurn(false);
 
     const active = players.filter((p) => !p.eliminated);
-    const playerIdx = active.indexOf(player);
+    const nextPlayersPlayed = turnPlayersPlayed + 1;
 
     setTimeout(() => {
-      playTurn(playerIdx + 1, active, players, cardsToDeal);
+      playTurn(nextPlayersPlayed, active, players, cardsToDeal);
     }, 600);
   };
 
@@ -280,12 +365,18 @@ export default function GameScreen({ navigation, route }) {
     setMessage(`Mano a ${winnerEntry.player.name}!`);
     setPlayers([...allPlayers]);
 
+    // Update round starter to the trick winner for next trick
+    const winnerIdx = activeList.indexOf(winnerEntry.player);
+    setRoundStarterIndex(winnerIdx);
+
     setTimeout(() => {
       setTableCards([]);
+      setTurnPlayersPlayed(0);
+      cardPlayedRef.current = false;
 
       if (activeList[0].hand.length > 0) {
-        const startIdx = activeList.indexOf(winnerEntry.player);
-        playTurn(startIdx, activeList, allPlayers, cards);
+        // Start new trick from the winner
+        playTurn(0, activeList, allPlayers, cards);
       } else {
         endRound(activeList, allPlayers);
       }
@@ -380,21 +471,23 @@ export default function GameScreen({ navigation, route }) {
   const bots = players.filter((p) => !p.isHuman);
   const isIndiana = cardsToDeal === 1;
   const activePlayers = players.filter((p) => !p.eliminated);
-  const dealerPlayer = activePlayers[(roundStarterIndex - 1 + activePlayers.length) % activePlayers.length];
+  const dealerPlayer = activePlayers.length > 0 
+    ? activePlayers[roundStarterIndex % activePlayers.length] 
+    : null;
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#0f0f23']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
-          Alert.alert('Abbandona partita?', 'Perderai la quota di ingresso.', [
-            { text: 'Continua', style: 'cancel' },
-            { text: 'Abbandona', style: 'destructive', onPress: () => navigation.goBack() },
-          ]);
-        }}>
+        <TouchableOpacity 
+          style={styles.exitButton}
+          onPress={() => {
+            Alert.alert('Abbandona partita?', 'Perderai la quota di ingresso.', [
+              { text: 'Continua', style: 'cancel' },
+              { text: 'Abbandona', style: 'destructive', onPress: () => navigation.goBack() },
+            ]);
+          }}
+        >
           <Text style={styles.exitText}>✕</Text>
         </TouchableOpacity>
         
@@ -402,9 +495,11 @@ export default function GameScreen({ navigation, route }) {
           <Text style={styles.leagueText}>{league.name}</Text>
         </View>
         
-        <Text style={styles.roundText}>
-          {cardsToDeal === 1 ? 'INDIANA' : `${cardsToDeal} CARTE`}
-        </Text>
+        <View style={styles.roundBadge}>
+          <Text style={styles.roundText}>
+            {cardsToDeal === 1 ? '🎯 INDIANA' : `${cardsToDeal} CARTE`}
+          </Text>
+        </View>
       </View>
 
       {/* Message */}
@@ -508,7 +603,7 @@ export default function GameScreen({ navigation, route }) {
                   card={card}
                   isHidden={isIndiana}
                   isJolly={card.isJolly()}
-                  onPress={gamePhase === 'playing' && activePlayer?.isHuman ? () => handleCardPlay(i) : null}
+                  onPress={gamePhase === 'playing' && isHumanTurn && !cardPlayedRef.current ? () => handleCardPlay(i) : null}
                 />
               </View>
             ))}
@@ -553,13 +648,39 @@ export default function GameScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+
+      {/* Dealer Selection Animation Modal */}
+      <Modal visible={showDealerAnimation} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.dealerModalContent}>
+            <Text style={styles.dealerModalTitle}>🎲 ESTRAZIONE MAZZIERE</Text>
+            {dealerAnimationPlayer && (
+              <Animated.View style={[
+                styles.dealerAnimCard,
+                {
+                  transform: [
+                    { scale: dealerAnimValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.2],
+                    })},
+                  ],
+                },
+              ]}>
+                <Text style={styles.dealerAnimEmoji}>🎴</Text>
+                <Text style={styles.dealerAnimName}>{dealerAnimationPlayer.name}</Text>
+              </Animated.View>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
@@ -569,27 +690,46 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 10,
   },
+  exitButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   exitText: {
     color: '#888',
-    fontSize: 24,
+    fontSize: 20,
   },
   leagueBadge: {
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   leagueText: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 14,
   },
+  roundBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   roundText: {
-    color: '#888',
-    fontSize: 14,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   messageContainer: {
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    marginBottom: 10,
   },
   messageText: {
     color: '#FFD700',
@@ -796,5 +936,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  dealerModalContent: {
+    backgroundColor: '#111',
+    padding: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#4ca1af',
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 320,
+  },
+  dealerModalTitle: {
+    color: '#4ca1af',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  dealerAnimCard: {
+    backgroundColor: '#1a1a2e',
+    padding: 25,
+    borderRadius: 15,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+    alignItems: 'center',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dealerAnimEmoji: {
+    fontSize: 50,
+    marginBottom: 10,
+  },
+  dealerAnimName: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });

@@ -5,23 +5,25 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
 import { LeagueBadge } from '../components/LeagueCard';
 import { getPlayerLeague } from '../utils/storage';
+import { COLORS, LEAGUES } from '../utils/constants';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   const { playerData, loading } = useGame();
 
   if (loading) {
     return (
-      <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f0f23']}
-        style={styles.loadingContainer}
-      >
+      <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Caricamento...</Text>
-      </LinearGradient>
+      </View>
     );
   }
 
@@ -31,245 +33,291 @@ export default function HomeScreen({ navigation }) {
     : 0;
 
   return (
-    <LinearGradient
-      colors={['#0f0c29', '#302b63', '#24243e']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Decorative Elements */}
-      <View style={styles.decorativeCircle1} />
-      <View style={styles.decorativeCircle2} />
-      
-      {/* Title Section */}
-      <View style={styles.titleContainer}>
-        <View style={styles.titleRow}>
-          <Text style={styles.cardEmoji}>🃏</Text>
-          <View>
-            <Text style={styles.title}>BISCA</Text>
-            <Text style={styles.subtitle}>DICTATOR EDITION</Text>
-          </View>
-          <Text style={styles.cardEmoji}>🃏</Text>
+      {/* Header with profile and notifications */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Text style={styles.profileEmoji}>{playerData.avatar || '🎴'}</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.coinsDisplay}>
+          <Text style={styles.coinsValue}>{playerData.coins.toLocaleString()}</Text>
+          <Text style={styles.coinsLabel}>🪙</Text>
         </View>
       </View>
 
-      {/* Player Card */}
-      <View style={styles.playerCard}>
-        <LinearGradient
-          colors={['rgba(255,215,0,0.15)', 'rgba(255,215,0,0.05)', 'rgba(0,0,0,0.3)']}
-          style={styles.playerCardGradient}
-        >
-          <View style={styles.playerHeader}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarEmoji}>👤</Text>
-            </View>
-            <View style={styles.playerInfo}>
-              <Text style={styles.playerName}>{playerData.name}</Text>
-              <LeagueBadge leagueId={currentLeague.id} />
-            </View>
-            <View style={styles.coinsContainer}>
-              <Text style={styles.coinsEmoji}>🪙</Text>
-              <Text style={styles.coinsValue}>{playerData.coins}</Text>
-            </View>
-          </View>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{playerData.gamesWon}</Text>
-              <Text style={styles.statLabel}>Vittorie</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{playerData.gamesPlayed}</Text>
-              <Text style={styles.statLabel}>Partite</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={[styles.statNumber, { color: winRate >= 50 ? '#4CAF50' : '#ff6b6b' }]}>
-                {winRate}%
-              </Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
-          </View>
-        </LinearGradient>
+      {/* Main Score Display */}
+      <View style={styles.scoreSection}>
+        <Text style={styles.scoreNumber}>{playerData.gamesWon}</Text>
+        <Text style={styles.scoreLabel}>Livello: {currentLeague.name}</Text>
       </View>
 
-      {/* Main Action Button */}
+      {/* League Cards Carousel */}
+      <Text style={styles.sectionTitle}>Tavoli Disponibili</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.carouselContent}
+        decelerationRate="fast"
+        snapToInterval={SCREEN_WIDTH * 0.75 + 15}
+      >
+        {LEAGUES.map((league, index) => {
+          const canAfford = playerData.coins >= league.entryFee;
+          const gradients = [
+            ['#667eea', '#764ba2'],
+            ['#11998e', '#38ef7d'],
+            ['#f093fb', '#f5576c'],
+            ['#4facfe', '#00f2fe'],
+            ['#fa709a', '#fee140'],
+          ];
+          
+          return (
+            <TouchableOpacity
+              key={league.id}
+              style={[styles.leagueCard, !canAfford && styles.leagueCardLocked]}
+              onPress={() => canAfford && navigation.navigate('LeagueSelect')}
+              disabled={!canAfford}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={gradients[index % gradients.length]}
+                style={styles.leagueCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.leagueCardHeader}>
+                  <Text style={styles.leagueIcon}>
+                    {index === 0 ? '☕' : index === 1 ? '🌋' : index === 2 ? '👑' : index === 3 ? '💎' : '🌟'}
+                  </Text>
+                  {!canAfford && <Text style={styles.lockIcon}>🔒</Text>}
+                </View>
+                
+                <Text style={styles.leagueCardTitle}>{league.name}</Text>
+                <Text style={styles.leagueCardSubtitle}>
+                  Buy-in {league.entryFee} • Premio {league.reward}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Main Play Button */}
       <TouchableOpacity
         style={styles.playButton}
         onPress={() => navigation.navigate('LeagueSelect')}
         activeOpacity={0.9}
       >
         <LinearGradient
-          colors={['#c0392b', '#e74c3c', '#c0392b']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={COLORS.gradientPurple}
           style={styles.playButtonGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
         >
           <Text style={styles.playButtonIcon}>🎴</Text>
           <Text style={styles.playButtonText}>GIOCA ORA</Text>
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Secondary Buttons */}
-      <View style={styles.secondaryRow}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Tutorial')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryIcon}>📖</Text>
-          <Text style={styles.secondaryText}>Tutorial</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Settings')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryIcon}>⚙️</Text>
-          <Text style={styles.secondaryText}>Opzioni</Text>
-        </TouchableOpacity>
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statNumber}>{playerData.gamesPlayed}</Text>
+          <Text style={styles.statLabel}>Partite</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBox}>
+          <Text style={[styles.statNumber, { color: winRate >= 50 ? COLORS.success : COLORS.danger }]}>
+            {winRate}%
+          </Text>
+          <Text style={styles.statLabel}>Win Rate</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBox}>
+          <TouchableOpacity onPress={() => navigation.navigate('Tutorial')}>
+            <Text style={styles.statNumber}>📖</Text>
+            <Text style={styles.statLabel}>Regole</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Version */}
-      <Text style={styles.version}>v1.0.0</Text>
-    </LinearGradient>
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Tutorial')}>
+          <Text style={styles.navIcon}>📚</Text>
+          <Text style={styles.navText}>Tutorial</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.navItem, styles.navItemCenter]} onPress={() => navigation.navigate('LeagueSelect')}>
+          <View style={styles.navCenterButton}>
+            <Text style={styles.navCenterIcon}>🎴</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Settings')}>
+          <Text style={styles.navIcon}>⚙️</Text>
+          <Text style={styles.navText}>Opzioni</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
   loadingText: {
-    color: '#fff',
+    color: COLORS.textPrimary,
     fontSize: 18,
   },
-  decorativeCircle1: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(192, 57, 43, 0.1)',
-  },
-  decorativeCircle2: {
-    position: 'absolute',
-    bottom: -150,
-    left: -100,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  titleRow: {
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  cardEmoji: {
-    fontSize: 40,
-  },
-  title: {
-    fontSize: 52,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    textShadowColor: '#c0392b',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 10,
-    letterSpacing: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#888',
-    letterSpacing: 4,
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  playerCard: {
-    width: '100%',
-    maxWidth: 380,
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 30,
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  playerCardGradient: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-    padding: 20,
-  },
-  playerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  avatarContainer: {
-    width: 55,
-    height: 55,
-    borderRadius: 27.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  profileButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.glass,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFD700',
-  },
-  avatarEmoji: {
-    fontSize: 28,
-  },
-  playerInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  playerName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
-  },
-  coinsContainer: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.4)',
+    borderColor: COLORS.glassBorder,
   },
-  coinsEmoji: {
-    fontSize: 24,
+  profileEmoji: {
+    fontSize: 26,
+  },
+  coinsDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.glass,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    gap: 8,
   },
   coinsValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: COLORS.denari,
+  },
+  coinsLabel: {
+    fontSize: 18,
+  },
+  scoreSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  scoreNumber: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+  },
+  scoreLabel: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: 5,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginLeft: 20,
+    marginBottom: 15,
+    marginTop: 10,
+  },
+  carouselContent: {
+    paddingHorizontal: 20,
+  },
+  leagueCard: {
+    width: SCREEN_WIDTH * 0.75,
+    height: 160,
+    marginRight: 15,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  leagueCardLocked: {
+    opacity: 0.5,
+  },
+  leagueCardGradient: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  leagueCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  leagueIcon: {
+    fontSize: 32,
+  },
+  lockIcon: {
+    fontSize: 20,
+  },
+  leagueCardTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+  },
+  leagueCardSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  playButton: {
+    marginHorizontal: 20,
+    marginTop: 25,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  playButtonGradient: {
+    paddingVertical: 18,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  playButtonIcon: {
+    fontSize: 26,
+  },
+  playButtonText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+    letterSpacing: 3,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 12,
-    paddingVertical: 15,
+    marginTop: 25,
+    marginHorizontal: 20,
+    backgroundColor: COLORS.glass,
+    borderRadius: 16,
+    paddingVertical: 18,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
   },
   statBox: {
     alignItems: 'center',
@@ -277,77 +325,60 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: COLORS.glassBorder,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: COLORS.denari,
   },
   statLabel: {
     fontSize: 12,
-    color: '#888',
+    color: COLORS.textSecondary,
     marginTop: 5,
   },
-  playButton: {
-    width: '100%',
-    maxWidth: 320,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-    shadowColor: '#c0392b',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 15,
-    elevation: 12,
-  },
-  playButtonGradient: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  playButtonIcon: {
-    fontSize: 28,
-  },
-  playButtonText: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 4,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  secondaryRow: {
-    flexDirection: 'row',
-    gap: 15,
-    width: '100%',
-    maxWidth: 320,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    paddingVertical: 18,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  secondaryIcon: {
-    fontSize: 26,
-    marginBottom: 6,
-  },
-  secondaryText: {
-    color: '#ccc',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  version: {
+  bottomNav: {
     position: 'absolute',
-    bottom: 25,
-    color: '#444',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundSecondary,
+    paddingTop: 15,
+    paddingBottom: 35,
+    paddingHorizontal: 30,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glassBorder,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navItemCenter: {
+    marginTop: -35,
+  },
+  navIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  navText: {
     fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  navCenterButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.denari,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.denari,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  navCenterIcon: {
+    fontSize: 28,
   },
 });

@@ -7,8 +7,8 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { getCardImage } from '../utils/images';
+import { COLORS } from '../utils/constants';
 
 const SLIDES = [
   {
@@ -80,13 +80,14 @@ export default function TutorialScreen({ navigation }) {
   const isFirst = currentSlide === 0;
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#0f0f23']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backText}>←</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>MANUALE DEL DITTATORE</Text>
+        <View style={styles.backButton} />
       </View>
 
       {/* Content */}
@@ -200,33 +201,44 @@ export default function TutorialScreen({ navigation }) {
           </TouchableOpacity>
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 function getSuitColor(suit) {
   switch (suit) {
-    case 'Denari': return '#FFD700';
-    case 'Coppe': return '#ff6666';
-    case 'Spade': return '#00ffff';
-    case 'Bastoni': return '#90EE90';
-    default: return '#fff';
+    case 'Denari': return COLORS.denari;
+    case 'Coppe': return COLORS.coppe;
+    case 'Spade': return COLORS.spade;
+    case 'Bastoni': return COLORS.bastoni;
+    default: return COLORS.textPrimary;
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
   },
   header: {
-    paddingTop: 60,
+    flexDirection: 'row',
+    paddingTop: 50,
     paddingBottom: 20,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: COLORS.glassBorder,
+  },
+  backButton: {
+    width: 40,
+  },
+  backText: {
+    color: COLORS.textSecondary,
+    fontSize: 24,
   },
   headerTitle: {
-    color: '#FFD700',
+    color: COLORS.denari,
     fontSize: 22,
     fontWeight: 'bold',
     letterSpacing: 2,
