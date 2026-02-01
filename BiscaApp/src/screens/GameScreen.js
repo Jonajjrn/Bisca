@@ -186,10 +186,12 @@ export default function GameScreen({ navigation, route }) {
     setIsHumanTurn(false);
     cardPlayedRef.current = false;
 
-    // Bidding starts from dealer - use name matching for robustness
+    // Bidding starts from player to the LEFT of dealer (dealer + 1)
+    // Dealer speaks LAST and has the forbidden bid constraint
     const dealerPlayer = currentPlayers[dealerIdx % currentPlayers.length];
-    const starterIdx = active.findIndex(p => p.name === dealerPlayer.name);
-    const starterIndex = starterIdx >= 0 ? starterIdx : 0;
+    const dealerActiveIdx = active.findIndex(p => p.name === dealerPlayer.name);
+    // Start from the player after the dealer (to the left)
+    const starterIndex = dealerActiveIdx >= 0 ? (dealerActiveIdx + 1) % active.length : 0;
     
     setTimeout(() => {
       doBidding(0, active, starterIndex, currentPlayers, actualCards, 0);
@@ -205,8 +207,8 @@ export default function GameScreen({ navigation, route }) {
       setGamePhase('playing');
       cardPlayedRef.current = false;
       
-      // First player after dealer leads the first trick
-      setTrickStarterIndex(0);
+      // First player to lead the first trick is the player who bid first (left of dealer)
+      setTrickStarterIndex(starterIdx);
       
       setTimeout(() => {
         playTurn(0, activeList, allPlayers, cards);
@@ -272,10 +274,13 @@ export default function GameScreen({ navigation, route }) {
     const dealerPlayer = players[dealerIndex % players.length];
     const dealerIdx = active.findIndex(p => p.name === dealerPlayer.name);
     const dealerActiveIdx = dealerIdx >= 0 ? dealerIdx : 0;
-    const bidIdx = (humanIdx - dealerActiveIdx + active.length) % active.length;
+    // Starter is now dealer + 1 (player to the left of dealer)
+    const starterIndex = (dealerActiveIdx + 1) % active.length;
+    // Calculate how many players have bid based on human's position relative to starter
+    const bidIdx = (humanIdx - starterIndex + active.length) % active.length;
 
     setTimeout(() => {
-      doBidding(bidIdx + 1, active, dealerActiveIdx, players, cardsToDeal, newBidsSum);
+      doBidding(bidIdx + 1, active, starterIndex, players, cardsToDeal, newBidsSum);
     }, 500);
   };
 
@@ -619,31 +624,25 @@ export default function GameScreen({ navigation, route }) {
                 </Text>
               </View>
               
-              {/* Cards indicator */}
-              {!bot.eliminated && bot.hand && bot.hand.length > 0 && (
+              {/* Cards count badge - only show in Indiana mode */}
+              {!bot.eliminated && bot.hand && bot.hand.length > 0 && isIndiana && bot.hand[0] && (
                 <View style={styles.cardsIndicator}>
-                  {isIndiana && bot.hand[0] ? (
-                    <View style={styles.miniCardVisible}>
-                      <Image 
-                        source={getCardImage(bot.hand[0].getImageName())}
-                        style={styles.miniCardImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-                  ) : (
-                    <View style={styles.cardsStack}>
-                      {bot.hand.map((_, i) => (
-                        <View key={i} style={[styles.miniCardBack, { marginLeft: i * 4 }]} />
-                      ))}
-                    </View>
-                  )}
+                  <View style={styles.miniCardVisible}>
+                    <Image 
+                      source={getCardImage(bot.hand[0].getImageName())}
+                      style={styles.miniCardImage}
+                      resizeMode="cover"
+                    />
+                  </View>
                 </View>
               )}
               
               {/* Speech bubble */}
               {speechBubble.player === bot.name && (
                 <View style={styles.speechBubble}>
-                  <Text style={styles.speechText}>{speechBubble.text}</Text>
+                  <View style={styles.speechBubbleInner}>
+                    <Text style={styles.speechText}>{speechBubble.text}</Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -1025,17 +1024,6 @@ const styles = StyleSheet.create({
   cardsIndicator: {
     marginTop: 4,
   },
-  cardsStack: {
-    flexDirection: 'row',
-  },
-  miniCardBack: {
-    width: 16,
-    height: 24,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: COLORS.denari,
-  },
   miniCardVisible: {
     width: 24,
     height: 36,
@@ -1049,14 +1037,17 @@ const styles = StyleSheet.create({
   speechBubble: {
     position: 'absolute',
     top: -32,
-    left: '50%',
-    transform: [{ translateX: -40 }],
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  speechBubbleInner: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     maxWidth: 100,
-    zIndex: 100,
   },
   speechText: {
     color: '#000',
