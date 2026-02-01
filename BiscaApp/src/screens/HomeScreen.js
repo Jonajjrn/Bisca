@@ -38,12 +38,9 @@ export default function HomeScreen({ navigation }) {
       
       {/* Header with profile and notifications */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Settings')}
-        >
+        <View style={styles.profileButton}>
           <Text style={styles.profileEmoji}>{playerData.avatar || '🎴'}</Text>
-        </TouchableOpacity>
+        </View>
         
         <View style={styles.coinsDisplay}>
           <Text style={styles.coinsValue}>{playerData.coins.toLocaleString()}</Text>

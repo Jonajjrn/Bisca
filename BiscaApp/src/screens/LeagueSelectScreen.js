@@ -15,14 +15,26 @@ export default function LeagueSelectScreen({ navigation }) {
   const { playerData, setCurrentLeague, deductCoins, gameSettings } = useGame();
 
   const handleLeagueSelect = async (league) => {
-    // Start game directly without confirmation dialog
-    const success = await deductCoins(league.entryFee);
-    if (success) {
-      setCurrentLeague(league.id);
-      navigation.navigate('Game', { league: league.id });
-    } else {
-      Alert.alert('Monete insufficienti', 'Non hai abbastanza monete per questo tavolo.');
-    }
+    // Show confirmation dialog before starting the game
+    Alert.alert(
+      'Conferma Partita',
+      `Vuoi giocare nella lega ${league.name}?\n\nIngresso: 🪙 ${league.entryFee}\nPremio: 🪙 ${league.reward}`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Gioca!',
+          onPress: async () => {
+            const success = await deductCoins(league.entryFee);
+            if (success) {
+              setCurrentLeague(league.id);
+              navigation.navigate('Game', { league: league.id });
+            } else {
+              Alert.alert('Monete insufficienti', 'Non hai abbastanza monete per questo tavolo.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (

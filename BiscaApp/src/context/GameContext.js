@@ -9,7 +9,7 @@ export function GameProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [currentLeague, setCurrentLeague] = useState(null);
   const [gameSettings, setGameSettings] = useState({
-    botCount: 3,
+    botCount: 5,
     lives: 3,
     maxCards: 5,
   });
