@@ -1,20 +1,67 @@
-import React from 'react';
-import { View, Image, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Image, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { getCardImage } from '../utils/images';
+import { COLORS } from '../utils/constants';
 
-export function CardComponent({ card, onPress, disabled, isHidden, isJolly, style }) {
+export function CardComponent({ card, onPress, disabled, isHidden, isJolly, style, isSelected }) {
   const imageName = card ? card.getImageName() : null;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const liftAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isSelected) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1.05,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.spring(liftAnim, {
+          toValue: -10,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.spring(liftAnim, {
+          toValue: 0,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isSelected]);
 
   if (isHidden) {
     return (
       <View style={[styles.card, styles.cardBack, style]}>
-        <View style={styles.backPattern} />
+        <View style={styles.backPattern}>
+          <View style={styles.backInner} />
+        </View>
       </View>
     );
   }
 
   const cardContent = (
-    <View style={[styles.card, isJolly && styles.jollyCard, style]}>
+    <Animated.View 
+      style={[
+        styles.card, 
+        isJolly && styles.jollyCard, 
+        style,
+        {
+          transform: [
+            { scale: scaleAnim },
+            { translateY: liftAnim },
+          ],
+        },
+      ]}
+    >
       {imageName && (
         <Image
           source={getCardImage(imageName)}
@@ -22,12 +69,12 @@ export function CardComponent({ card, onPress, disabled, isHidden, isJolly, styl
           resizeMode="cover"
         />
       )}
-    </View>
+    </Animated.View>
   );
 
   if (onPress && !disabled) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
         {cardContent}
       </TouchableOpacity>
     );
@@ -39,7 +86,9 @@ export function CardComponent({ card, onPress, disabled, isHidden, isJolly, styl
 export function CardBack({ style, small }) {
   return (
     <View style={[small ? styles.smallCard : styles.card, styles.cardBack, style]}>
-      <View style={styles.backPattern} />
+      <View style={styles.backPattern}>
+        <View style={styles.backInner} />
+      </View>
     </View>
   );
 }
@@ -48,24 +97,20 @@ const styles = StyleSheet.create({
   card: {
     width: 70,
     height: 105,
-    borderRadius: 6,
-    backgroundColor: '#fdfbf7',
-    borderWidth: 1,
-    borderColor: '#000',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 8,
   },
   smallCard: {
     width: 30,
     height: 45,
-    borderRadius: 3,
-    backgroundColor: '#fdfbf7',
-    borderWidth: 1,
-    borderColor: '#000',
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
   },
   cardImage: {
@@ -73,19 +118,31 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   cardBack: {
-    backgroundColor: '#8b0000',
-    borderColor: '#fff',
-    borderWidth: 2,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderWidth: 3,
+    borderColor: COLORS.denari,
   },
   backPattern: {
     flex: 1,
-    backgroundColor: '#8b0000',
-    opacity: 0.9,
+    margin: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backInner: {
+    width: '70%',
+    height: '70%',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.denari,
+    opacity: 0.5,
   },
   jollyCard: {
-    borderColor: '#FFD700',
-    borderWidth: 2,
-    shadowColor: '#FFD700',
-    shadowRadius: 10,
+    borderWidth: 3,
+    borderColor: COLORS.denari,
+    shadowColor: COLORS.denari,
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
   },
 });

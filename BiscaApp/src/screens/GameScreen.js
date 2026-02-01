@@ -471,21 +471,23 @@ export default function GameScreen({ navigation, route }) {
   const bots = players.filter((p) => !p.isHuman);
   const isIndiana = cardsToDeal === 1;
   const activePlayers = players.filter((p) => !p.eliminated);
-  const dealerPlayer = activePlayers[(roundStarterIndex - 1 + activePlayers.length) % activePlayers.length];
+  const dealerPlayer = activePlayers.length > 0 
+    ? activePlayers[roundStarterIndex % activePlayers.length] 
+    : null;
 
   return (
-    <LinearGradient
-      colors={['#1a1a2e', '#16213e', '#0f0f23']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
-          Alert.alert('Abbandona partita?', 'Perderai la quota di ingresso.', [
-            { text: 'Continua', style: 'cancel' },
-            { text: 'Abbandona', style: 'destructive', onPress: () => navigation.goBack() },
-          ]);
-        }}>
+        <TouchableOpacity 
+          style={styles.exitButton}
+          onPress={() => {
+            Alert.alert('Abbandona partita?', 'Perderai la quota di ingresso.', [
+              { text: 'Continua', style: 'cancel' },
+              { text: 'Abbandona', style: 'destructive', onPress: () => navigation.goBack() },
+            ]);
+          }}
+        >
           <Text style={styles.exitText}>✕</Text>
         </TouchableOpacity>
         
@@ -493,9 +495,11 @@ export default function GameScreen({ navigation, route }) {
           <Text style={styles.leagueText}>{league.name}</Text>
         </View>
         
-        <Text style={styles.roundText}>
-          {cardsToDeal === 1 ? 'INDIANA' : `${cardsToDeal} CARTE`}
-        </Text>
+        <View style={styles.roundBadge}>
+          <Text style={styles.roundText}>
+            {cardsToDeal === 1 ? '🎯 INDIANA' : `${cardsToDeal} CARTE`}
+          </Text>
+        </View>
       </View>
 
       {/* Message */}
@@ -669,13 +673,14 @@ export default function GameScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
@@ -685,27 +690,46 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 10,
   },
+  exitButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   exitText: {
     color: '#888',
-    fontSize: 24,
+    fontSize: 20,
   },
   leagueBadge: {
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   leagueText: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 14,
   },
+  roundBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
   roundText: {
-    color: '#888',
-    fontSize: 14,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   messageContainer: {
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 15,
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    marginBottom: 10,
   },
   messageText: {
     color: '#FFD700',

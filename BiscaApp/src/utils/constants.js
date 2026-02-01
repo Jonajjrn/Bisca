@@ -1,5 +1,39 @@
 // Game Constants
 
+// Premium Dark Theme Colors
+export const COLORS = {
+  // Background
+  background: '#000000',
+  backgroundSecondary: '#111111',
+  backgroundTertiary: '#1a1a1a',
+  
+  // Suit colors (neon/vibrant)
+  denari: '#FFD700',      // Oro caldo / Giallo sole
+  coppe: '#FF6B6B',       // Rosso corallo
+  spade: '#00D4FF',       // Ciano elettrico
+  bastoni: '#4ECDC4',     // Verde menta
+  
+  // UI Colors
+  textPrimary: '#FFFFFF',
+  textSecondary: '#888888',
+  textMuted: '#555555',
+  accent: '#FFD700',
+  accentSecondary: '#4ca1af',
+  danger: '#FF4757',
+  success: '#2ECC71',
+  
+  // Gradients
+  gradientPurple: ['#667eea', '#764ba2'],
+  gradientOrange: ['#f093fb', '#f5576c'],
+  gradientBlue: ['#4facfe', '#00f2fe'],
+  gradientGreen: ['#11998e', '#38ef7d'],
+  gradientDark: ['#0f0c29', '#302b63', '#24243e'],
+  
+  // Glass effect
+  glass: 'rgba(255, 255, 255, 0.1)',
+  glassBorder: 'rgba(255, 255, 255, 0.2)',
+};
+
 export const LEAGUES = [
   { id: 'bronze', name: 'Bronzo', minCoins: 0, maxCoins: 500, entryFee: 10, reward: 25, color: '#CD7F32' },
   { id: 'silver', name: 'Argento', minCoins: 500, maxCoins: 2000, entryFee: 50, reward: 125, color: '#C0C0C0' },
@@ -59,4 +93,22 @@ export const INITIAL_PLAYER_DATA = {
   gamesPlayed: 0,
   gamesWon: 0,
   highestLeague: 'bronze',
+  avatar: '🎴',
+  hasCompletedOnboarding: false,
 };
+
+// Avatar options for profile creation
+export const AVATAR_OPTIONS = [
+  { id: 'card', emoji: '🎴', name: 'Cartaio' },
+  { id: 'crown', emoji: '👑', name: 'Re' },
+  { id: 'devil', emoji: '😈', name: 'Diavolo' },
+  { id: 'cool', emoji: '😎', name: 'Cool' },
+  { id: 'nerd', emoji: '🤓', name: 'Professore' },
+  { id: 'elder', emoji: '👴', name: 'Nonno' },
+  { id: 'lady', emoji: '👵', name: 'Nonna Rosa' },
+  { id: 'wizard', emoji: '🧙', name: 'Mago' },
+  { id: 'clown', emoji: '🤡', name: 'Jolly' },
+  { id: 'skull', emoji: '💀', name: 'Morte' },
+  { id: 'alien', emoji: '👽', name: 'Alieno' },
+  { id: 'robot', emoji: '🤖', name: 'Robot' },
+];

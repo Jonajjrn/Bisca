@@ -2,14 +2,15 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { getPortraitImage } from '../utils/images';
 import { CardBack } from './Card';
+import { COLORS } from '../utils/constants';
 
 export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }) {
   const portraitSource = getPortraitImage(player.name);
   
   const getBidStatusStyle = () => {
     if (player.bid < 0) return {};
-    if (player.taken === player.bid) return { backgroundColor: 'rgba(0,255,0,0.2)', borderColor: '#0f0' };
-    if (player.taken > player.bid) return { backgroundColor: 'rgba(255,0,0,0.2)', borderColor: '#f00' };
+    if (player.taken === player.bid) return { backgroundColor: 'rgba(46, 204, 113, 0.3)', borderColor: COLORS.success };
+    if (player.taken > player.bid) return { backgroundColor: 'rgba(255, 71, 87, 0.3)', borderColor: COLORS.danger };
     return {};
   };
 
@@ -25,7 +26,7 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
         </View>
       )}
       
-      <View style={styles.avatarFrame}>
+      <View style={[styles.avatarFrame, isActive && styles.avatarFrameActive]}>
         {portraitSource ? (
           <Image source={portraitSource} style={styles.avatarImage} />
         ) : (
@@ -35,7 +36,7 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
         )}
       </View>
       
-      <Text style={styles.playerName}>{player.name}</Text>
+      <Text style={styles.playerName} numberOfLines={1}>{player.name}</Text>
       
       <View style={styles.heartsContainer}>
         {Array.from({ length: 3 }).map((_, i) => (
@@ -47,10 +48,10 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
       
       <View style={styles.statsRow}>
         <View style={[styles.statBadge, styles.bidBadge]}>
-          <Text style={styles.bidText}>BID: {player.bid >= 0 ? player.bid : '-'}</Text>
+          <Text style={styles.bidText}>{player.bid >= 0 ? player.bid : '-'}</Text>
         </View>
         <View style={[styles.statBadge, styles.takenBadge, getBidStatusStyle()]}>
-          <Text style={styles.takenText}>TOT: {player.taken}</Text>
+          <Text style={styles.takenText}>{player.taken}</Text>
         </View>
       </View>
       
@@ -77,41 +78,45 @@ export function PlayerBox({ player, isActive, isDealer, showCards, cardsToDeal }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(40, 40, 40, 0.95)',
-    borderRadius: 8,
-    padding: 10,
+    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+    borderRadius: 16,
+    padding: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#444',
-    minWidth: 100,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    minWidth: 110,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 6,
   },
   activeContainer: {
-    borderColor: '#FFD700',
-    transform: [{ scale: 1.05 }],
-    shadowColor: '#FFD700',
+    borderColor: COLORS.denari,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    shadowColor: COLORS.denari,
+    shadowOpacity: 0.5,
   },
   eliminatedContainer: {
     opacity: 0.4,
-    borderColor: '#f00',
+    borderColor: COLORS.danger,
   },
   dealerBtn: {
     position: 'absolute',
     top: -8,
     right: -8,
-    width: 22,
-    height: 22,
-    backgroundColor: '#fff',
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    width: 24,
+    height: 24,
+    backgroundColor: COLORS.denari,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+    shadowColor: COLORS.denari,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
   dealerText: {
     fontSize: 12,
@@ -119,13 +124,16 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   avatarFrame: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 2,
-    borderColor: '#FFD700',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     overflow: 'hidden',
-    marginBottom: 5,
+    marginBottom: 8,
+  },
+  avatarFrameActive: {
+    borderColor: COLORS.denari,
   },
   avatarImage: {
     width: '100%',
@@ -133,24 +141,24 @@ const styles = StyleSheet.create({
   },
   avatarFallback: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: COLORS.backgroundTertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarLetter: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#666',
+    color: COLORS.textSecondary,
   },
   playerName: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginBottom: 3,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+    fontSize: 13,
+    marginBottom: 4,
   },
   heartsContainer: {
     flexDirection: 'row',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   heart: {
     fontSize: 12,
@@ -162,49 +170,46 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: '#111',
-    borderRadius: 4,
-    padding: 2,
+    gap: 4,
   },
   statBadge: {
     flex: 1,
-    paddingVertical: 2,
+    paddingVertical: 4,
     alignItems: 'center',
-    marginHorizontal: 1,
-    borderRadius: 2,
+    borderRadius: 8,
   },
   bidBadge: {
-    backgroundColor: '#333',
-    borderBottomWidth: 2,
-    borderBottomColor: '#FFD700',
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: COLORS.denari,
   },
   takenBadge: {
-    backgroundColor: '#333',
-    borderBottomWidth: 2,
-    borderBottomColor: '#555',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   bidText: {
-    color: '#FFD700',
-    fontSize: 10,
+    color: COLORS.denari,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   takenText: {
-    color: '#fff',
-    fontSize: 10,
+    color: COLORS.textPrimary,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   handContainer: {
     flexDirection: 'row',
-    marginTop: 5,
+    marginTop: 8,
     justifyContent: 'center',
   },
   cardBackMini: {
-    marginLeft: -10,
+    marginLeft: -8,
   },
   miniCardContainer: {
-    width: 25,
-    height: 38,
-    borderRadius: 2,
+    width: 28,
+    height: 42,
+    borderRadius: 4,
     overflow: 'hidden',
     marginHorizontal: 1,
   },

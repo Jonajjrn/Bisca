@@ -1,36 +1,43 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LEAGUES } from '../utils/constants';
+import { LEAGUES, COLORS } from '../utils/constants';
 
 // Get gradient colors based on league
 const getLeagueGradient = (leagueId) => {
   switch (leagueId) {
     case 'bronze':
-      return ['#CD7F32', '#8B4513', '#CD7F32'];
+      return ['#CD7F32', '#8B4513'];
     case 'silver':
-      return ['#C0C0C0', '#808080', '#C0C0C0'];
+      return ['#C0C0C0', '#808080'];
     case 'gold':
-      return ['#FFD700', '#FFA500', '#FFD700'];
+      return ['#FFD700', '#FFA500'];
     case 'platinum':
-      return ['#E5E4E2', '#A8A8A8', '#E5E4E2'];
+      return ['#E5E4E2', '#A8A8A8'];
     case 'diamond':
-      return ['#B9F2FF', '#87CEEB', '#B9F2FF'];
+      return ['#B9F2FF', '#87CEEB'];
     default:
-      return ['#333', '#222', '#333'];
+      return ['#333', '#222'];
+  }
+};
+
+const getLeagueIcon = (leagueId) => {
+  switch (leagueId) {
+    case 'bronze': return '☕';
+    case 'silver': return '🥈';
+    case 'gold': return '🏆';
+    case 'platinum': return '💎';
+    case 'diamond': return '👑';
+    default: return '🎴';
   }
 };
 
 export function LeagueCard({ league, coins, onPress }) {
   const canAfford = coins >= league.entryFee;
-  const isUnlocked = coins >= league.minCoins || league.id === 'bronze';
   
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        !canAfford && styles.disabled,
-      ]}
+      style={[styles.container, !canAfford && styles.disabled]}
       onPress={onPress}
       disabled={!canAfford}
       activeOpacity={0.85}
@@ -43,12 +50,7 @@ export function LeagueCard({ league, coins, onPress }) {
       >
         <View style={styles.innerCard}>
           <View style={styles.leftSection}>
-            <Text style={styles.leagueEmoji}>
-              {league.id === 'diamond' ? '💎' : 
-               league.id === 'platinum' ? '⚪' :
-               league.id === 'gold' ? '🏆' :
-               league.id === 'silver' ? '🥈' : '🥉'}
-            </Text>
+            <Text style={styles.leagueEmoji}>{getLeagueIcon(league.id)}</Text>
           </View>
           
           <View style={styles.centerSection}>
@@ -97,53 +99,50 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: 10,
     marginHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowRadius: 12,
+    elevation: 12,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   gradientContainer: {
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 3,
   },
   innerCard: {
-    backgroundColor: 'rgba(20, 20, 30, 0.95)',
-    borderRadius: 18,
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    minHeight: 100,
+    padding: 18,
+    minHeight: 110,
   },
   leftSection: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 16,
   },
   leagueEmoji: {
-    fontSize: 32,
+    fontSize: 34,
   },
   centerSection: {
     flex: 1,
   },
   leagueName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: COLORS.textPrimary,
     letterSpacing: 2,
     marginBottom: 10,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
   statsRow: {
     flexDirection: 'row',
@@ -153,68 +152,68 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   statLabel: {
-    color: '#aaa',
+    color: COLORS.textSecondary,
     fontSize: 11,
     marginBottom: 2,
   },
   statValue: {
-    color: '#fff',
+    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   rewardValue: {
-    color: '#4CAF50',
+    color: COLORS.success,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: '#444',
-    marginHorizontal: 15,
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: 16,
   },
   rightSection: {
-    marginLeft: 10,
+    marginLeft: 12,
   },
   playButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#c0392b',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.denari,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#c0392b',
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: COLORS.denari,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 6,
   },
   playButtonDisabled: {
-    backgroundColor: '#444',
+    backgroundColor: COLORS.backgroundTertiary,
   },
   playButtonText: {
-    color: '#fff',
-    fontSize: 22,
+    color: '#000',
+    fontSize: 24,
     fontWeight: 'bold',
   },
   lockedOverlay: {
     position: 'absolute',
-    bottom: 8,
+    bottom: 10,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   lockedText: {
-    color: '#ff6b6b',
+    color: COLORS.danger,
     fontSize: 12,
     fontWeight: '600',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
   badge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 14,
   },
   badgeText: {
     fontSize: 13,
