@@ -87,6 +87,16 @@ export const DIALOGUE_DB = {
   },
 };
 
+/**
+ * Initial player data structure for new users
+ * @property {string} name - Display name of the player
+ * @property {number} coins - Currency balance for entering leagues
+ * @property {number} gamesPlayed - Total games played
+ * @property {number} gamesWon - Total games won
+ * @property {string} highestLeague - ID of the highest league achieved
+ * @property {string} avatar - Emoji avatar for the player profile
+ * @property {boolean} hasCompletedOnboarding - Whether the user has completed the intro tutorial
+ */
 export const INITIAL_PLAYER_DATA = {
   name: 'Giocatore',
   coins: 100,
