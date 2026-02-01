@@ -370,7 +370,8 @@ export default function GameScreen({ navigation, route }) {
 
   const resolveTrick = (activeList, allPlayers, cards) => {
     if (tableCards.length === 0) {
-      console.error('No table cards to resolve');
+      console.error('No table cards to resolve - skipping trick resolution');
+      setMessage('Errore: nessuna carta in tavola');
       return;
     }
 
@@ -397,10 +398,10 @@ export default function GameScreen({ navigation, route }) {
         setTrickStarterIndex(winnerIdx);
       } else {
         // This should not happen since we just found the player, but handle it gracefully
-        console.warn('Winner found but indexOf returned -1, keeping current trick starter');
+        console.warn(`Failed to update trick starter: winner ${winnerPlayer.name} index not found. Retaining previous trick starter.`);
       }
     } else {
-      console.error('Winner player not found in active list');
+      console.error(`Winner ${winnerEntry.player.name} not found in ${activeList.length} active players`);
       setMessage(`Mano completata`);
     }
     
@@ -560,9 +561,13 @@ export default function GameScreen({ navigation, route }) {
           <Text style={styles.leagueText}>{league.name}</Text>
         </View>
         
-        <View style={styles.roundBadge}>
+        <View 
+          style={styles.roundBadge}
+          accessibilityLabel={isIndiana ? 'Modalità Indiana, 1 carta' : `${cardsToDeal} carte`}
+          accessibilityRole="text"
+        >
           <Text style={styles.roundText}>
-            {isIndiana ? '🎯' : `${cardsToDeal}📄`}
+            {isIndiana ? '🎯 1' : `${cardsToDeal}📄`}
           </Text>
         </View>
       </View>
@@ -1235,7 +1240,8 @@ const styles = StyleSheet.create({
   },
   forbiddenLine: {
     position: 'absolute',
-    width: '120%',
+    // Uses 60px (slightly larger than button width of 50px) to create diagonal cross effect
+    width: 60,
     height: 2,
     backgroundColor: 'rgba(255, 71, 87, 0.6)',
     transform: [{ rotate: '-45deg' }],
