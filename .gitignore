@@ -3,6 +3,40 @@ dist/
 build/
 .env
 .env.*
+*.env
+!.env.example
 .DS_Store
 .vscode/
+.idea/
 .claude/settings.local.json
+
+# Security-sensitive files (never commit)
+*.pem
+*.key
+*.pfx
+*.p12
+*.keystore
+*.jks
+credentials.*
+secrets.*
+*secret*
+token*
+*_token*
+service-account*.json
+.ssh/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# OS
+Thumbs.db
+
+# Large binary blobs (> 5MB)
+*.psd
+*.ai
+*.sketch
